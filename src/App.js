@@ -8,8 +8,7 @@ import { useMemo } from 'react';
 import Timeline from './graphs/timeline';
 import TimelineContext from './graphs/timeline_context';
 import Overview from './graphs/overview';
-
-
+import ListCountries from './graphs/list_countries';
 
 function App() {
   const [countryByYearData, setCountryByYearData] = useState([]);
@@ -64,6 +63,10 @@ function App() {
         data={countryByYearData}
         setSelectedYear={setSelectedYear}
         setSelectedRegionData={setSelectedRegionData}
+      />
+      <ListCountries
+        data={selectedRegionData}
+        selectedYear={selectedYear}
       />
       {/* Example: pass data + setters to charts */}
       {/* <MapChart data={countryByYearData} onRegionSelect={setSelectedRegion} /> */}
