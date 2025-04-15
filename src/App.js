@@ -7,6 +7,7 @@ import { useMemo } from 'react';
 
 import Timeline from './graphs/timeline';
 import TimelineContext from './graphs/timeline_context';
+import Overview from './graphs/overview';
 
 
 
@@ -59,7 +60,11 @@ function App() {
         setSelectedYear={setSelectedYear}
       />
       <TimelineContext selectedTimelineText={selectedTimelineText} />
-
+      <Overview
+        data={countryByYearData}
+        setSelectedYear={setSelectedYear}
+        setSelectedRegionData={setSelectedRegionData}
+      />
       {/* Example: pass data + setters to charts */}
       {/* <MapChart data={countryByYearData} onRegionSelect={setSelectedRegion} /> */}
       {/* <BarChart data={selectedRegionData} selectedYear={selectedYear} onYearChange={setSelectedYear} /> */}
