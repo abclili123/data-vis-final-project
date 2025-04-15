@@ -3,8 +3,11 @@ import './App.css';
 import * as d3 from 'd3';
 
 import React, { useEffect, useState } from 'react';
+import { useMemo } from 'react';
 
 import Timeline from './graphs/timeline';
+import TimelineContext from './graphs/timeline_context';
+
 
 
 function App() {
@@ -23,8 +26,13 @@ function App() {
     d3.csv('/data/events_by_year.csv').then(setEventByYearData);
   }, []);
 
+  const memoizedYears = useMemo(() => {
+    return (eventByYearData || [])
+      .map(d => +d.year)
+      .sort((a, b) => a - b);
+  }, [eventByYearData]);
+
   useEffect(() => {
-    console.log(selectedYear)
     if (eventByYearData.length > 0) {
       const match = eventByYearData.find(d => +d.year === +selectedYear);
       if (match) {
@@ -46,12 +54,12 @@ function App() {
   return (
     <div className="App">
       <Timeline
-        years={(eventByYearData || [])
-          .map(d => +d.year)
-          .sort((a, b) => a - b)}        
+        years={memoizedYears}
         selectedYear={selectedYear}
         setSelectedYear={setSelectedYear}
       />
+      <TimelineContext selectedTimelineText={selectedTimelineText} />
+
       {/* Example: pass data + setters to charts */}
       {/* <MapChart data={countryByYearData} onRegionSelect={setSelectedRegion} /> */}
       {/* <BarChart data={selectedRegionData} selectedYear={selectedYear} onYearChange={setSelectedYear} /> */}
