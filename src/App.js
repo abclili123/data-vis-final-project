@@ -9,6 +9,7 @@ import Timeline from './graphs/timeline';
 import TimelineContext from './graphs/timeline_context';
 import Overview from './graphs/overview';
 import ListCountries from './graphs/list_countries';
+import MapChart from './graphs/map';
 
 function App() {
   const [countryByYearData, setCountryByYearData] = useState([]);
@@ -33,6 +34,7 @@ function App() {
       .sort((a, b) => a - b);
   }, [eventByYearData]);
 
+  // trigger correct shared variable assignments
   useEffect(() => {
     if (eventByYearData.length > 0) {
       const match = eventByYearData.find(d => +d.year === +selectedYear);
@@ -60,6 +62,7 @@ function App() {
 
   return (
     <div className="App">
+      <MapChart data={countryByYearData} selectedYear={selectedYear} />
       <Timeline
         years={memoizedYears}
         selectedYear={selectedYear}
