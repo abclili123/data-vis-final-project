@@ -3,7 +3,7 @@ import './App.css';
 import * as d3 from 'd3';
 
 import React, { useEffect, useState } from 'react';
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 
 import Timeline from './graphs/timeline';
 import TimelineContext from './graphs/timeline_context';
@@ -18,6 +18,7 @@ function App() {
   const [selectedRegionData, setSelectedRegionData] = useState([]);
   const [selectedYear, setSelectedYear] = useState(2013);
   const [selectedTimelineText, setSelectedTimelineText] = useState("");
+  const yearChangeSource = useRef(null);
 
   // Load data once on mount
   useEffect(() => {
@@ -39,9 +40,15 @@ function App() {
         setSelectedTimelineText(match.event);
       }
     }
-    setSelectedRegion(null);
-    setSelectedRegionData([]);
-  }, [selectedYear, eventByYearData]);
+  
+    if (yearChangeSource.current === 'timeline') {
+      setSelectedRegion(null);
+      setSelectedRegionData([]);
+    }
+  
+    // Reset the source after handling
+    yearChangeSource.current = null;
+  }, [selectedYear, eventByYearData]);  
 
   // Filter region data when region or data changes
   useEffect(() => {
@@ -56,12 +63,19 @@ function App() {
       <Timeline
         years={memoizedYears}
         selectedYear={selectedYear}
-        setSelectedYear={setSelectedYear}
+        setSelectedYear={(year) => {
+          yearChangeSource.current = 'timeline';
+          setSelectedYear(year);
+        }}
+        yearChangeSource={yearChangeSource}
       />
       <TimelineContext selectedTimelineText={selectedTimelineText} />
       <Overview
         data={countryByYearData}
-        setSelectedYear={setSelectedYear}
+        setSelectedYear={(year) => {
+          yearChangeSource.current = 'overview';
+          setSelectedYear(year);
+        }}
         setSelectedRegionData={setSelectedRegionData}
       />
       <ListCountries
