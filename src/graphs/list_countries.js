@@ -19,7 +19,6 @@ const ListCountries = ({ data, selectedYear }) => {
   const min = d3.min(valuesWithNumbers, d => d.value);
   const max = d3.max(valuesWithNumbers, d => d.value);
 
-  const fontSizeScale = d3.scaleSqrt().domain([min, max]).range([5, 24]);
   const opacityScale = d3.scaleLinear().domain([min, max]).range([0.4, 1]);
 
   // Sort descending by value
@@ -37,13 +36,12 @@ const ListCountries = ({ data, selectedYear }) => {
       fontFamily: 'sans-serif'
     }}>
       {sorted.map((d, i) => {
-        const fontSize = d.value ? fontSizeScale(d.value) : fontSizeScale(min);
         const opacity = d.value ? opacityScale(d.value) : opacityScale(min);
         return (
           <div
             key={i}
             style={{
-              fontSize: `${fontSize}px`,
+              fontSize: `24px`,
               opacity: opacity
             }}
           >

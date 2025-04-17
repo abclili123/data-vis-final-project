@@ -62,32 +62,66 @@ function App() {
 
   return (
     <div className="App">
-      <MapChart data={countryByYearData} selectedYear={selectedYear} />
-      <Timeline
-        years={memoizedYears}
-        selectedYear={selectedYear}
-        setSelectedYear={(year) => {
-          yearChangeSource.current = 'timeline';
-          setSelectedYear(year);
-        }}
-        yearChangeSource={yearChangeSource}
-      />
-      <TimelineContext selectedTimelineText={selectedTimelineText} />
-      <Overview
-        data={countryByYearData}
-        setSelectedYear={(year) => {
-          yearChangeSource.current = 'overview';
-          setSelectedYear(year);
-        }}
-        setSelectedRegionData={setSelectedRegionData}
-      />
-      <ListCountries
-        data={selectedRegionData}
-        selectedYear={selectedYear}
-      />
-      {/* Example: pass data + setters to charts */}
-      {/* <MapChart data={countryByYearData} onRegionSelect={setSelectedRegion} /> */}
-      {/* <BarChart data={selectedRegionData} selectedYear={selectedYear} onYearChange={setSelectedYear} /> */}
+      <div style={{
+        display: 'flex',
+        flexDirection: 'row',
+        gap: '2rem',
+        padding: '1rem',
+        alignItems: 'flex-start',
+      }}>
+        {/* Left Column */}
+        <div style={{
+          flex: 2,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '1.5rem',
+          minHeight: 0,
+        }}>
+          <div style={{ flexShrink: 1 }}>
+            <MapChart data={countryByYearData} selectedYear={selectedYear} />
+          </div>
+          <div style={{ flexShrink: 1 }}>
+            <Overview
+              data={countryByYearData}
+              setSelectedYear={(year) => {
+                yearChangeSource.current = 'overview';
+                setSelectedYear(year);
+              }}
+              setSelectedRegionData={setSelectedRegionData}
+            />
+          </div>
+        </div>
+
+        {/* Right Column */}
+        <div style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '1.5rem',
+          minHeight: 0,
+        }}>
+          <div style={{ flexShrink: 1 }}>
+            <Timeline
+                years={memoizedYears}
+                selectedYear={selectedYear}
+                setSelectedYear={(year) => {
+                  yearChangeSource.current = 'timeline';
+                  setSelectedYear(year);
+                }}
+                yearChangeSource={yearChangeSource}
+              />
+          </div>
+          <div style={{ flexShrink: 1 }}>
+            <TimelineContext selectedTimelineText={selectedTimelineText} />
+          </div>
+          <div style={{ flexShrink: 1 }}>
+            <ListCountries
+              data={selectedRegionData}
+              selectedYear={selectedYear}
+            />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

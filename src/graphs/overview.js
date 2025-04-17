@@ -37,7 +37,7 @@ const Overview = ({ data, setSelectedYear, setSelectedRegionData }) => {
 
     const stacked = d3.stack().keys(regions)(stackedData);
 
-    const width = 800, height = 550;
+    const width = 700, height = 350;
     const margin = { top: 60, right: 150, bottom: 40, left: 60 };
 
     const x = d3.scaleBand()

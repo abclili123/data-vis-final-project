@@ -3,7 +3,7 @@ import * as d3 from 'd3';
 
 const Timeline = ({ years, selectedYear, setSelectedYear }) => {
   const svgRef = useRef();
-  const width = 1000, height = 120;
+  const width = 500, height = 120;
   const margin = { top: 20, right: 50, bottom: 30, left: 50 };
 
   // Initial render: only runs when `years` changes
