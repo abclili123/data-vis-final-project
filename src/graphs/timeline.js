@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 
-const Timeline = ({ years, selectedYear, setSelectedYear }) => {
+const Timeline = ({ years, selectedYears, setSelectedYears }) => {
   const svgRef = useRef();
   const width = 500, height = 120;
   const margin = { top: 20, right: 50, bottom: 30, left: 50 };
@@ -29,10 +29,11 @@ const Timeline = ({ years, selectedYear, setSelectedYear }) => {
       .attr('stroke-linecap', 'round');
 
     // Progress line — animated later
+    // Progress line — animated later
     svg.append('line')
       .attr('class', 'progress-line')
-      .attr('x1', x.range()[0])
-      .attr('x2', x(selectedYear))
+      .attr('x1', x(selectedYears[0] || years[0]))
+      .attr('x2', x(selectedYears[1] || selectedYears[0] || years[0]))
       .attr('y1', height / 2)
       .attr('y2', height / 2)
       .attr('stroke', '#4CAF50')
@@ -48,11 +49,25 @@ const Timeline = ({ years, selectedYear, setSelectedYear }) => {
       .attr('cx', d => x(d))
       .attr('cy', height / 2)
       .attr('r', 10)
-      .attr('fill', d => d <= selectedYear ? '#4CAF50' : '#fff')
+      .attr('fill', d => {
+        if (selectedYears.length === 2) {
+          return d >= selectedYears[0] && d <= selectedYears[1] ? '#4CAF50' : '#fff';
+        } else {
+          return selectedYears.includes(d) ? '#4CAF50' : '#fff';
+        }
+      })      
       .attr('stroke', '#4CAF50')
       .attr('stroke-width', 2)
       .style('cursor', 'pointer')
-      .on('click', (_, d) => setSelectedYear(+d));
+      .on('click', (_, d) => {
+        if (selectedYears.includes(d)) {
+          setSelectedYears(selectedYears.filter(year => year !== d));
+        } else if (selectedYears.length < 2) {
+          setSelectedYears([...selectedYears, d].sort((a, b) => a - b));
+        } else {
+          setSelectedYears([d]); // Reset if two already selected
+        }
+      })      
 
     // Year labels
     svg.selectAll('text.year-label')
@@ -67,7 +82,7 @@ const Timeline = ({ years, selectedYear, setSelectedYear }) => {
       .text(d => d);
   }, [years]);
 
-  // Animate changes in selectedYear
+  // Animate changes in selectedYears
   useEffect(() => {
     if (!Array.isArray(years) || years.length === 0) return;
 
@@ -77,16 +92,27 @@ const Timeline = ({ years, selectedYear, setSelectedYear }) => {
       .range([margin.left, width - margin.right])
       .padding(0.5);
 
+    const start = x(selectedYears[0] || years[0]);
+    const end = x(selectedYears[1] || selectedYears[0] || years[0]);
+
     svg.select('line.progress-line')
       .transition()
       .duration(400)
-      .attr('x2', x(selectedYear));
+      .attr('x1', start)
+      .attr('x2', end);
 
     svg.selectAll('circle.year-dot')
       .transition()
       .duration(400)
-      .attr('fill', d => +d <= selectedYear ? '#4CAF50' : '#fff');
-  }, [selectedYear, years]);
+      .attr('fill', d => {
+        if (selectedYears.length === 2) {
+          return d >= selectedYears[0] && d <= selectedYears[1] ? '#4CAF50' : '#fff';
+        } else {
+          return selectedYears.includes(d) ? '#4CAF50' : '#fff';
+        }
+      });
+  }, [selectedYears, years]);
+
 
   return <svg ref={svgRef} width={width} height={height}></svg>;
 };

@@ -18,6 +18,7 @@ function App() {
   const [selectedRegion, setSelectedRegion] = useState(null);
   const [selectedRegionData, setSelectedRegionData] = useState([]);
   const [selectedYear, setSelectedYear] = useState(2013);
+  const [selectedYears, setSelectedYears] = useState([2013, 2015]);
   const [selectedTimelineText, setSelectedTimelineText] = useState("");
   const yearChangeSource = useRef(null);
 
@@ -62,66 +63,20 @@ function App() {
 
   return (
     <div className="App">
-      <div style={{
-        display: 'flex',
-        flexDirection: 'row',
-        gap: '2rem',
-        padding: '1rem',
-        alignItems: 'flex-start',
-      }}>
-        {/* Left Column */}
-        <div style={{
-          flex: 2,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '1.5rem',
-          minHeight: 0,
-        }}>
-          <div style={{ flexShrink: 1 }}>
-            <MapChart data={countryByYearData} selectedYear={selectedYear} />
-          </div>
-          <div style={{ flexShrink: 1 }}>
-            <Overview
-              data={countryByYearData}
-              setSelectedYear={(year) => {
-                yearChangeSource.current = 'overview';
-                setSelectedYear(year);
-              }}
-              setSelectedRegionData={setSelectedRegionData}
-            />
-          </div>
-        </div>
-
-        {/* Right Column */}
-        <div style={{
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '1.5rem',
-          minHeight: 0,
-        }}>
-          <div style={{ flexShrink: 1 }}>
-            <Timeline
-                years={memoizedYears}
-                selectedYear={selectedYear}
-                setSelectedYear={(year) => {
-                  yearChangeSource.current = 'timeline';
-                  setSelectedYear(year);
-                }}
-                yearChangeSource={yearChangeSource}
-              />
-          </div>
-          <div style={{ flexShrink: 1 }}>
-            <TimelineContext selectedTimelineText={selectedTimelineText} />
-          </div>
-          <div style={{ flexShrink: 1 }}>
-            <ListCountries
-              data={selectedRegionData}
-              selectedYear={selectedYear}
-            />
-          </div>
-        </div>
-      </div>
+      <Timeline
+        years={(eventByYearData || []).map(d => +d.year).sort((a, b) => a - b)}
+        selectedYears={selectedYears}
+        setSelectedYears={setSelectedYears}
+      />
+      <Overview
+        data={countryByYearData}
+        setSelectedYear={(year) => {
+          yearChangeSource.current = 'overview';
+          setSelectedYear(year);
+        }}
+        setSelectedRegionData={setSelectedRegionData}
+      />
+      <MapChart data={countryByYearData} selectedYear={selectedYear} />
     </div>
   );
 }
