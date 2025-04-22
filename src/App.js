@@ -6,9 +6,7 @@ import React, { useEffect, useState } from 'react';
 import { useMemo, useRef } from 'react';
 
 import Timeline from './graphs/timeline';
-import TimelineContext from './graphs/timeline_context';
 import Overview from './graphs/overview';
-import ListCountries from './graphs/list_countries';
 import MapChart from './graphs/map';
 
 function App() {
