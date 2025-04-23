@@ -74,7 +74,7 @@ function App() {
         }}
         setSelectedRegionData={setSelectedRegionData}
       />
-      <MapChart data={countryByYearData} selectedYear={selectedYear} />
+      <MapChart data={countryByYearData} selectedYears={selectedYears} />
     </div>
   );
 }

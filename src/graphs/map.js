@@ -2,12 +2,12 @@ import React, { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 import * as topojson from 'topojson-client';
 
-const MapChart = ({ data, selectedYear }) => {
+const MapChart = ({ data, selectedYears }) => {
   const ref = useRef();
   const tooltipRef = useRef();
 
   useEffect(() => {
-    if (!data || data.length === 0) return;
+    if (!data || data.length === 0 || selectedYears.length !== 2) return;
 
     const width = 800;
     const height = 400;
@@ -42,44 +42,136 @@ const MapChart = ({ data, selectedYear }) => {
         "North Macedonia": "Macedonia",
         "South Sudan": "S. Sudan"
       };
-      
+
       const missingCentroids = [];
 
-      const parseValue = str => {
+      const parseValue = (str, d) => {
         if (typeof str === 'string') {
-          return +str.replace(/,/g, '') || 0;
+          if (str === 'D') {
+            d.hasDefaultValue = true;
+            return 50;
+          }
+          const cleaned = str.replace(/,/g, '');
+          const num = +cleaned;
+          if (isNaN(num)) {
+            console.warn('Invalid numeric value:', str);
+            return 0;
+          }
+          return num;
         }
         return +str || 0;
       };
-      
+
       const rawData = data.map(d => {
         const normalizedName = countryNameMap[d.Country] || d.Country;
         const coords = countryCentroids.get(normalizedName);
-        const value = parseValue(d[selectedYear]);
+        const local = { hasDefaultValue: false };
+        const valueStart = parseValue(d[selectedYears[0]], local);
+        const valueEnd = parseValue(d[selectedYears[1]], local);
+
         if (!coords) {
           missingCentroids.push({
             Country: d.Country,
             Region: d.Region,
-            Value: value
+            Value: valueStart
           });
         }
+
         return {
           id: normalizedName,
           region: d.Region,
-          value: value,
+          valueStart,
+          valueEnd,
+          value: valueStart,
+          hasDefaultValue: local.hasDefaultValue,
           x: coords ? coords[0] : null,
           y: coords ? coords[1] : null,
           originalX: coords ? coords[0] : null,
-          originalY: coords ? coords[1] : null
+          originalY: coords ? coords[1] : null,
+          xSimStart: null,
+          ySimStart: null,
+          xSimEnd: null,
+          ySimEnd: null
         };
       }).filter(d => d.x !== null && d.y !== null);
-      
+
       console.warn("Missing centroids:", missingCentroids);
-      console.log(rawData)
 
       const radius = d3.scaleSqrt()
-        .domain([0, d3.max(rawData, d => d.value)])
+        .domain([0, d3.max(rawData, d => Math.max(d.valueStart, d.valueEnd))])
         .range([0, 30]);
+
+      const regionColor = d3.scaleOrdinal()
+        .domain([...new Set(rawData.map(d => d.region))])
+        .range(d3.schemeTableau10);
+
+      const tooltip = d3.select(tooltipRef.current);
+
+      const usBox = {
+        cx: 200,
+        cy: 76,
+        width: 70,
+        height: 40,
+        angle: 15
+      };
+
+      const setSimulatedPositions = (data, yearType) => {
+        const valueKey = yearType === 'start' ? 'valueStart' : 'valueEnd';
+        const xKey = yearType === 'start' ? 'xSimStart' : 'xSimEnd';
+        const yKey = yearType === 'start' ? 'ySimStart' : 'ySimEnd';
+
+        data.forEach(d => {
+          d.value = d[valueKey];
+          d.x = d.originalX;
+          d.y = d.originalY;
+        });
+
+        const sim = d3.forceSimulation(data)
+          .force("x", d3.forceX(d => d.x).strength(0.5))
+          .force("y", d3.forceY(d => d.y).strength(0.5))
+          .force("collide", d3.forceCollide(d => radius(d.value) + 1))
+          .force("avoidRotatedUSBox", () => {
+            const angle = (usBox.angle * Math.PI) / 180;
+            const cosA = Math.cos(-angle);
+            const sinA = Math.sin(-angle);
+
+            data.forEach(d => {
+              const r = radius(d.value);
+              const dx = d.x - usBox.cx;
+              const dy = d.y - usBox.cy;
+              const rx = dx * cosA - dy * sinA;
+              const ry = dx * sinA + dy * cosA;
+
+              const hw = usBox.width / 2;
+              const hh = usBox.height / 2;
+
+              if (rx + r > -hw && rx - r < hw && ry + r > -hh && ry - r < hh) {
+                const len = Math.sqrt(dx * dx + dy * dy) || 1;
+                const strength = 2;
+                d.vx += (dx / len) * strength;
+                d.vy += (dy / len) * strength;
+              }
+            });
+          });
+
+        for (let i = 0; i < 300; i++) sim.tick();
+
+        data.forEach(d => {
+          d[xKey] = d.x;
+          d[yKey] = d.y;
+        });
+
+        sim.stop();
+      };
+
+      setSimulatedPositions(rawData, 'start');
+      setSimulatedPositions(rawData, 'end');
+
+      rawData.forEach(d => {
+        d.x = d.xSimStart;
+        d.y = d.ySimStart;
+        d.value = d.valueStart;
+      });
 
       svg.attr("viewBox", [0, 0, width - 100, height - 100])
         .style("width", "100%")
@@ -113,50 +205,16 @@ const MapChart = ({ data, selectedYear }) => {
         .attr("stroke-width", 1.5)
         .attr("d", path);
 
-      const regionColor = d3.scaleOrdinal()
-        .domain([...new Set(rawData.map(d => d.region))])
-        .range(d3.schemeTableau10);
-
-      const tooltip = d3.select(tooltipRef.current);
-
-      // Approximate bounding box for the contiguous US in projected coordinates
-      const usBox = {
-        cx: 200, // center x
-        cy: 76, // center y
-        width: 70,
-        height: 40,
-        angle: 15 // degrees
-      };
-
-      const simulation = d3.forceSimulation(rawData)
-      .force("x", d3.forceX(d => d.x).strength(0.5))
-      .force("y", d3.forceY(d => d.y).strength(0.5))
-      .force("collide", d3.forceCollide(d => radius(d.value) + 1))
-      .force("avoidRotatedUSBox", () => {
-        const angle = (usBox.angle * Math.PI) / 180;
-        const cosA = Math.cos(-angle);
-        const sinA = Math.sin(-angle);
-
-        rawData.forEach(d => {
-          const r = radius(d.value);
-          const dx = d.x - usBox.cx;
-          const dy = d.y - usBox.cy;
-          const rx = dx * cosA - dy * sinA;
-          const ry = dx * sinA + dy * cosA;
-
-          const hw = usBox.width / 2;
-          const hh = usBox.height / 2;
-
-          if (rx + r > -hw && rx - r < hw && ry + r > -hh && ry - r < hh) {
-            const len = Math.sqrt(dx * dx + dy * dy) || 1;
-            const strength = 2;
-            d.vx += (dx / len) * strength;
-            d.vy += (dy / len) * strength;
-          }
-        });
-      });
-
-      for (let i = 0; i < 300; i++) simulation.tick();
+        const labelGroup = svg.append("g")
+        .attr("transform", `translate(${usBox.cx},${usBox.cy-5})`);
+      
+      const totalText = labelGroup.append("text")
+        .attr("text-anchor", "middle")
+        .attr("dominant-baseline", "middle")
+        .attr("font-family", "sans-serif")
+        .attr("font-size", 12)
+        .attr("fill", "black")
+        .text("");
 
       const groups = svg.selectAll("g.country-group")
         .data(rawData)
@@ -167,7 +225,7 @@ const MapChart = ({ data, selectedYear }) => {
         .on("mouseenter", (event, d) => {
           tooltip
             .style("display", "block")
-            .html(`<strong>${d.id}</strong><br/>${d.value.toLocaleString()}`);
+            .html(`<strong>${d.id}</strong><br/>${d.hasDefaultValue ? 'Unknown' : Math.round(d.value).toLocaleString()}`);
         })
         .on("mousemove", (event) => {
           tooltip
@@ -178,12 +236,13 @@ const MapChart = ({ data, selectedYear }) => {
           tooltip.style("display", "none");
         });
 
-      groups.append("circle")
-        .attr("r", d => radius(d.value))
+      const circles = groups.append("circle")
+        .attr("r", d => radius(d.valueStart))
         .attr("fill", d => regionColor(d.region))
         .attr("fill-opacity", 0.9)
-        .attr("stroke", "#fff")
-        .attr("stroke-width", 0.5);
+        .attr("stroke", d => d.hasDefaultValue ? "white" : "#fff")
+        .attr("stroke-width", 0.5)
+        .attr("stroke-dasharray", d => d.hasDefaultValue ? "4,2" : null);
 
       groups.append("text")
         .text(d => d.id)
@@ -192,9 +251,63 @@ const MapChart = ({ data, selectedYear }) => {
         .attr("font-family", "sans-serif")
         .attr("font-weight", "normal")
         .attr("fill", "white")
-        .style("font-size", d => `${radius(d.value) * 0.8}px`);
+        .style("font-size", d => `${radius(d.valueStart) * 0.8}px`);
+
+      const updateTotalLabel = (year, total) => {
+        const formattedTotal = Math.round(total).toLocaleString();
+      
+        const updateTspans = totalText.selectAll("tspan").data([year, formattedTotal]);
+      
+        updateTspans.join(
+          enter => enter.append("tspan")
+            .attr("x", 0)
+            .attr("dy", (d, i) => `${i === 0 ? "0em" : "1.2em"}`)
+            .style("opacity", 0)
+            .text(d => d)
+            .transition()
+            .duration(500)
+            .style("opacity", 1),
+          update => update
+            .transition()
+            .duration(500)
+            .style("opacity", 0)
+            .on("end", function(_, i) {
+              d3.select(this)
+                .text(i === 0 ? year : formattedTotal)
+                .transition()
+                .duration(500)
+                .style("opacity", 1);
+            }),
+          exit => exit.transition().duration(300).style("opacity", 0).remove()
+        );
+      };
+
+      d3.interval(() => {
+        rawData.forEach(d => {
+          const isStart = d.value === d.valueStart;
+          d.value = isStart ? d.valueEnd : d.valueStart;
+          d.x = isStart ? d.xSimEnd : d.xSimStart;
+          d.y = isStart ? d.ySimEnd : d.ySimStart;
+          const currentYear = isStart ? selectedYears[1] : selectedYears[0];
+          const currentTotal = d3.sum(rawData.filter(d => !d.hasDefaultValue), d => d.value);
+          updateTotalLabel(currentYear, currentTotal);
+        });
+
+        circles.transition()
+          .duration(1000)
+          .attr("r", d => radius(d.value));
+
+        groups.transition()
+          .duration(1000)
+          .attr("transform", d => `translate(${d.x},${d.y})`);
+
+        groups.select("text")
+          .transition()
+          .duration(1000)
+          .style("font-size", d => `${radius(d.value) * 0.8}px`);
+      }, 5000);
     });
-  }, [data, selectedYear]);
+  }, [data, selectedYears]);
 
   return (
     <div>
