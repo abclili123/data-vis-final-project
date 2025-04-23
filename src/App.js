@@ -10,7 +10,7 @@ import MapChart from './graphs/map';
 function App() {
   const [countryByYearData, setCountryByYearData] = useState([]);
   const [sexByYearData, setSexByYearData] = useState([]);
-  const [selectedYears, setSelectedYears] = useState([2013, 2015]);
+  const [selectedYears, setSelectedYears] = useState([]);
 
   // Load data once on mount
   useEffect(() => {

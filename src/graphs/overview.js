@@ -5,7 +5,25 @@ const Overview = ({ data, selectedYears, setSelectedYears }) => {
   const svgRef = useRef();
   const tooltipRef = useRef();
 
-  useEffect(() => {
+  // Helper to parse string values (same as in Map)
+const parseValue = (str, d) => {
+  if (typeof str === 'string') {
+    if (str === 'D') {
+      d.hasDefaultValue = true;
+      return 50;
+    }
+    const cleaned = str.replace(/,/g, '');
+    const num = +cleaned;
+    if (isNaN(num)) {
+      console.warn('Invalid numeric value:', str);
+      return 0;
+    }
+    return num;
+  }
+  return +str || 0;
+};
+
+useEffect(() => {
     if (!data || data.length === 0) return;
 
     const svg = d3.select(svgRef.current);
@@ -18,7 +36,14 @@ const Overview = ({ data, selectedYears, setSelectedYears }) => {
     const grouped = {};
     data.forEach(row => {
       years.forEach(year => {
-        const value = +row[year].replace(/,/g, "");
+        const raw = row[year];
+        if (!raw || !row.Region || !row.Country) {
+          return;
+        }
+        const value = parseValue(raw, row);
+        if (row.Country.includes("China") || row.Country.includes("Congo")) {
+          console.log("Parsed:", value, "Country:", row.Country);
+        }
         if (!Number.isFinite(value)) return;
         const region = row.Region;
         grouped[year] ??= {};
@@ -134,17 +159,7 @@ const Overview = ({ data, selectedYears, setSelectedYears }) => {
       .attr("y1", timelineY)
       .attr("y2", timelineY)
       .attr("stroke", "#ddd")
-      .attr("stroke-width", 4);
-
-    if (selectedYears.length === 2) {
-      svg.append("line")
-        .attr("x1", getBarCenter(selectedYears[0]))
-        .attr("x2", getBarCenter(selectedYears[1]))
-        .attr("y1", timelineY)
-        .attr("y2", timelineY)
-        .attr("stroke", "#4CAF50")
-        .attr("stroke-width", 4);
-    }   
+      .attr("stroke-width", 4); 
 
     svg.selectAll("circle.year-dot")
       .data(years)
@@ -175,6 +190,16 @@ const Overview = ({ data, selectedYears, setSelectedYears }) => {
         console.log("Selected years:", updated);
         setSelectedYears(updated);
       });
+
+      if (selectedYears.length === 2) {
+        svg.append("line")
+          .attr("x1", getBarCenter(selectedYears[0]))
+          .attr("x2", getBarCenter(selectedYears[1]))
+          .attr("y1", timelineY)
+          .attr("y2", timelineY)
+          .attr("stroke", "#4CAF50")
+          .attr("stroke-width", 4);
+      }
 
     svg.append("g")
       .attr("transform", `translate(${margin.left},0)`)
