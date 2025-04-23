@@ -35,11 +35,13 @@ function App() {
           <MapChart data={countryByYearData} selectedYears={selectedYears} selectedRegions={selectedRegions}/>
         </div>
       </div>
-      <SankeyChart
-        data={countryByYearData}
-        selectedYears={selectedYears}
-        selectedRegions={selectedRegions}
-      />
+      <div style={{ flex: 1 , border: "solid 1px purple" }}>
+        <SankeyChart
+          data={countryByYearData}
+          selectedYears={selectedYears}
+          selectedRegions={selectedRegions}
+        />
+      </div>
     </div>
   );
 }
