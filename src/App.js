@@ -11,6 +11,7 @@ function App() {
   const [countryByYearData, setCountryByYearData] = useState([]);
   const [sexByYearData, setSexByYearData] = useState([]);
   const [selectedYears, setSelectedYears] = useState([]);
+  const [selectedRegions, setSelectedRegions] = useState([])
 
   // Load data once on mount
   useEffect(() => {
@@ -26,10 +27,11 @@ function App() {
             data={countryByYearData}
             selectedYears={selectedYears}
             setSelectedYears={setSelectedYears}
+            setSelectedRegions={setSelectedRegions}
           />
         </div>
         <div style={{ flex: 2, border: "solid 1px blue" }}>
-          <MapChart data={countryByYearData} selectedYears={selectedYears} />
+          <MapChart data={countryByYearData} selectedYears={selectedYears} selectedRegions={selectedRegions}/>
         </div>
       </div>
     </div>

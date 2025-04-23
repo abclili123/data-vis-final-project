@@ -1,49 +1,78 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
+import regionColorScale from './region_color_scale';
 
-const Overview = ({ data, selectedYears, setSelectedYears }) => {
+const Overview = ({ data, selectedYears, setSelectedYears, setSelectedRegions }) => {
   const svgRef = useRef();
   const tooltipRef = useRef();
+  const [visibleRegions, setVisibleRegions] = useState([]); // null means all regions are visible
 
-  // Helper to parse string values (same as in Map)
-const parseValue = (str, d) => {
-  if (typeof str === 'string') {
-    if (str === 'D') {
-      d.hasDefaultValue = true;
-      return 50;
+  const parseValue = (str, d) => {
+    if (typeof str === 'string') {
+      if (str === 'D') {
+        d.hasDefaultValue = true;
+        return 50;
+      }
+      const cleaned = str.replace(/,/g, '');
+      const num = +cleaned;
+      if (isNaN(num)) {
+        console.warn('Invalid numeric value:', str);
+        return 0;
+      }
+      return num;
     }
-    const cleaned = str.replace(/,/g, '');
-    const num = +cleaned;
-    if (isNaN(num)) {
-      console.warn('Invalid numeric value:', str);
-      return 0;
-    }
-    return num;
-  }
-  return +str || 0;
-};
+    return +str || 0;
+  };
 
-useEffect(() => {
+  // Compute the max value once, using all regions
+  const maxYRef = useRef(0);
+  useEffect(() => {
+    if (!data || data.length === 0) return;
+    const years = Object.keys(data[0]).filter(k => /^\d{4}$/.test(k));
+    const allRegions = Array.from(new Set(data.map(d => d.Region)));
+
+    const grouped = {};
+    data.forEach(row => {
+      years.forEach(year => {
+        const raw = row[year];
+        if (!raw || !row.Region || !row.Country) return;
+        const value = parseValue(raw, row);
+        if (!Number.isFinite(value)) return;
+        const region = row.Region;
+        grouped[year] ??= {};
+        grouped[year][region] ??= 0;
+        grouped[year][region] += value;
+      });
+    });
+
+    const stackedData = years.map(year => {
+      const entry = { year };
+      for (const region of allRegions) {
+        entry[region] = grouped[year]?.[region] ?? 0;
+      }
+      return entry;
+    });
+
+    const maxY = d3.max(stackedData, d => d3.sum(allRegions, r => d[r]));
+    maxYRef.current = maxY;
+  }, [data]);
+
+  useEffect(() => {
     if (!data || data.length === 0) return;
 
     const svg = d3.select(svgRef.current);
     svg.selectAll("*").remove();
 
     const years = Object.keys(data[0]).filter(k => /^\d{4}$/.test(k));
-    const regions = Array.from(new Set(data.map(d => d.Region)));
+    const allRegions = Array.from(new Set(data.map(d => d.Region)));
+    const regions = visibleRegions === null ? allRegions : visibleRegions;
 
-    // Group data by region per year
     const grouped = {};
     data.forEach(row => {
       years.forEach(year => {
         const raw = row[year];
-        if (!raw || !row.Region || !row.Country) {
-          return;
-        }
+        if (!raw || !row.Region || !row.Country) return;
         const value = parseValue(raw, row);
-        if (row.Country.includes("China") || row.Country.includes("Congo")) {
-          console.log("Parsed:", value, "Country:", row.Country);
-        }
         if (!Number.isFinite(value)) return;
         const region = row.Region;
         grouped[year] ??= {};
@@ -65,21 +94,13 @@ useEffect(() => {
     const width = 700, height = 400;
     const margin = { top: 60, right: 150, bottom: 40, left: 60 };
 
-    const x = d3.scaleBand()
-      .domain(years)
-      .range([margin.left, width - margin.right])
-      .padding(0.1);
-
+    const x = d3.scaleBand().domain(years).range([margin.left, width - margin.right]).padding(0.1);
     const y = d3.scaleLinear()
-      .domain([0, d3.max(stackedData, d => d3.sum(regions, r => d[r]))])
-      .nice()
+      .domain([0, maxYRef.current])
       .range([height - margin.bottom, margin.top]);
 
-    const color = d3.scaleOrdinal()
-      .domain(regions)
-      .range(d3.schemeCategory10);
+    const color = regionColorScale;
 
-    // Add bars
     const bars = svg.append("g")
       .selectAll("g")
       .data(stacked)
@@ -94,7 +115,6 @@ useEffect(() => {
       .attr("height", d => y(d[0]) - y(d[1]))
       .attr("width", x.bandwidth());
 
-    // Tooltip
     const tooltip = d3.select(tooltipRef.current);
 
     svg.append("g")
@@ -144,12 +164,10 @@ useEffect(() => {
       })
       .on("mouseleave", () => tooltip.style("opacity", 0));
 
-    // Axes
     svg.append("g")
       .attr("transform", `translate(0,${height - margin.bottom})`)
       .call(d3.axisBottom(x));
 
-    // Year selector line and dots directly under axis
     const timelineY = height - margin.bottom + 30;
     const getBarCenter = d => x(d) + x.bandwidth() / 2;
 
@@ -159,7 +177,7 @@ useEffect(() => {
       .attr("y1", timelineY)
       .attr("y2", timelineY)
       .attr("stroke", "#ddd")
-      .attr("stroke-width", 4); 
+      .attr("stroke-width", 4);
 
     svg.selectAll("circle.year-dot")
       .data(years)
@@ -187,41 +205,55 @@ useEffect(() => {
         } else {
           updated = [d];
         }
-        console.log("Selected years:", updated);
         setSelectedYears(updated);
       });
 
-      if (selectedYears.length === 2) {
-        svg.append("line")
-          .attr("x1", getBarCenter(selectedYears[0]))
-          .attr("x2", getBarCenter(selectedYears[1]))
-          .attr("y1", timelineY)
-          .attr("y2", timelineY)
-          .attr("stroke", "#4CAF50")
-          .attr("stroke-width", 4);
-      }
+    if (selectedYears.length === 2) {
+      svg.append("line")
+        .attr("x1", getBarCenter(selectedYears[0]))
+        .attr("x2", getBarCenter(selectedYears[1]))
+        .attr("y1", timelineY)
+        .attr("y2", timelineY)
+        .attr("stroke", "#4CAF50")
+        .attr("stroke-width", 4);
+    }
 
     svg.append("g")
       .attr("transform", `translate(${margin.left},0)`)
       .call(d3.axisLeft(y));
 
-    // Legend
     const legend = svg.append("g")
       .attr("transform", `translate(${width - margin.right + 10}, ${margin.top})`);
 
-    regions.forEach((region, i) => {
-      const g = legend.append("g").attr("transform", `translate(0, ${i * 20})`);
+    allRegions.forEach((region, i) => {
+      const isActive = visibleRegions === null || visibleRegions.includes(region);
+      const g = legend.append("g").attr("transform", `translate(0, ${i * 20})`).style("cursor", "pointer")
+      .on("click", () => {
+        setVisibleRegions(prev => {
+          let next;
+          if (prev.includes(region)) {
+            next = prev.filter(r => r !== region);
+          } else {
+            next = [...prev, region];
+          }
+          setSelectedRegions(next);
+          return next;
+        });
+      });
+      
       g.append("rect")
         .attr("width", 15)
         .attr("height", 15)
-        .attr("fill", color(region));
+        .attr("fill", color(region))
+        .attr("stroke", isActive ? "none" : "#999")
+        .attr("fill-opacity", isActive ? 1 : 0.3);
       g.append("text")
         .attr("x", 20)
         .attr("y", 12)
         .text(region)
         .style("font-size", "12px");
     });
-  }, [data, selectedYears]);
+  }, [data, selectedYears, visibleRegions]);
 
   return (
     <>

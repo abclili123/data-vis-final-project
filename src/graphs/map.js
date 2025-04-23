@@ -1,8 +1,10 @@
 import React, { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 import * as topojson from 'topojson-client';
+import regionColorScale from './region_color_scale';
 
-const MapChart = ({ data, selectedYears }) => {
+
+const MapChart = ({ data, selectedYears, selectedRegions }) => {
   const ref = useRef();
   const tooltipRef = useRef();
 
@@ -21,7 +23,7 @@ useEffect(() => {
       const projection = d3.geoNaturalEarth1().fitSize([width - 100, height - 100], { type: "Sphere" });
       const path = d3.geoPath(projection);
 
-      if (selectedYears.length === 0) {
+      if (selectedYears.length === 0 || selectedRegions.length===0) {
         svg.attr("viewBox", [0, 0, width - 100, height - 100])
         .style("width", "100%")
         .style("height", "auto");
@@ -102,7 +104,9 @@ useEffect(() => {
       const yearA = selectedYears[0];
       const yearB = selectedYears[1];
 
-      const rawData = data.map(d => {
+      const rawData = data
+      .filter(d => selectedRegions.includes(d.Region))
+      .map(d => {
         const normalizedName = countryNameMap[d.Country] || d.Country;
         const coords = countryCentroids.get(normalizedName);
         const local = { hasDefaultValue: false };
@@ -139,17 +143,13 @@ useEffect(() => {
         .domain([0, d3.max(rawData, d => Math.max(d.valueStart, d.valueEnd))])
         .range([0, 30]);
 
-      const regionColor = d3.scaleOrdinal()
-        .domain([...new Set(rawData.map(d => d.region))])
-        .range(d3.schemeTableau10);
-
       const tooltip = d3.select(tooltipRef.current);
 
       const usBox = {
-        cx: 200,
+        cx: 100,
         cy: 76,
-        width: 70,
-        height: 40,
+        width: 60,
+        height: 30,
         angle: 15
       };
 
@@ -252,41 +252,52 @@ useEffect(() => {
       const labelGroup = svg.append("g")
         .attr("transform", `translate(${usBox.cx},${usBox.cy-5})`);
 
+        const textBackground = labelGroup.append("rect")
+        .attr("x", -33)
+        .attr("y", -10)
+        .attr("width", 60)
+        .attr("height", 26)
+        .attr("fill", "white")
+        .attr("opacity", 0.5)
+        .attr("rx", 4);
+      
       const totalText = labelGroup.append("text")
         .attr("text-anchor", "middle")
         .attr("dominant-baseline", "middle")
         .attr("font-family", "sans-serif")
-        .attr("font-size", 12)
-        .attr("fill", "black");
+        .attr("font-size", 8)
+        .attr("fill", "black");      
 
-      const updateTotalLabel = (year, total) => {
-        const formattedTotal = Math.round(total).toLocaleString();
-
-        const updateTspans = totalText.selectAll("tspan").data([year, formattedTotal]);
-
-        updateTspans.join(
-          enter => enter.append("tspan")
-            .attr("x", 0)
-            .attr("dy", (d, i) => `${i === 0 ? "0em" : "1.2em"}`)
-            .style("opacity", 0)
-            .text(d => d)
-            .transition()
-            .duration(500)
-            .style("opacity", 1),
-          update => update
-            .transition()
-            .duration(500)
-            .style("opacity", 0)
-            .on("end", function(_, i) {
-              d3.select(this)
-                .text(i === 0 ? year : formattedTotal)
-                .transition()
-                .duration(500)
-                .style("opacity", 1);
-            }),
-          exit => exit.transition().duration(300).style("opacity", 0).remove()
-        );
-      };
+        const updateTotalLabel = (year, total) => {
+          const yearLine = `Year: ${year}`;
+          const totalLine = `Total: ${Math.round(total).toLocaleString()}`;
+        
+          const updateTspans = totalText.selectAll("tspan").data([yearLine, totalLine]);
+        
+          updateTspans.join(
+            enter => enter.append("tspan")
+              .attr("x", 0)
+              .attr("dy", (d, i) => i === 0 ? "0em" : "1.2em")
+              .style("opacity", 0)
+              .text(d => d)
+              .transition()
+              .duration(500)
+              .style("opacity", 1),
+            update => update
+              .transition()
+              .duration(500)
+              .style("opacity", 0)
+              .on("end", function(_, i) {
+                d3.select(this)
+                  .text(i === 0 ? yearLine : totalLine)
+                  .transition()
+                  .duration(500)
+                  .style("opacity", 1);
+              }),
+            exit => exit.transition().duration(300).style("opacity", 0).remove()
+          );
+        };
+        
 
       const total = d3.sum(rawData.filter(d => !d.hasDefaultValue), d => d.value);
       updateTotalLabel(yearA, total);
@@ -313,7 +324,7 @@ useEffect(() => {
 
       const circles = groups.append("circle")
         .attr("r", d => radius(d.value))
-        .attr("fill", d => regionColor(d.region))
+        .attr("fill", d => regionColorScale(d.region))
         .attr("fill-opacity", 0.9)
         .attr("stroke", d => d.hasDefaultValue ? "white" : "#fff")
         .attr("stroke-width", 0.5)
@@ -355,7 +366,7 @@ useEffect(() => {
         }, 5000);
       }
     });
-  }, [data, selectedYears]);
+  }, [data, selectedYears, selectedRegions]);
 
   return (
     <div style={{ padding: '20px', position: 'relative' }}>
