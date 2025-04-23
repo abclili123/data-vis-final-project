@@ -6,10 +6,10 @@ const MapChart = ({ data, selectedYears }) => {
   const ref = useRef();
   const tooltipRef = useRef();
 
-  useEffect(() => {
-    if (!data || data.length === 0 || selectedYears.length === 0) return;
+useEffect(() => {
+    if (!data || data.length === 0) return;
 
-    const isSingleYear = selectedYears.length === 1;
+    const isSingleYear = selectedYears.length === 1
     const width = 800;
     const height = 400;
 
@@ -20,6 +20,42 @@ const MapChart = ({ data, selectedYears }) => {
       const countriesFeature = topojson.feature(world, world.objects.countries);
       const projection = d3.geoNaturalEarth1().fitSize([width - 100, height - 100], { type: "Sphere" });
       const path = d3.geoPath(projection);
+
+      if (selectedYears.length === 0) {
+        svg.attr("viewBox", [0, 0, width - 100, height - 100])
+        .style("width", "100%")
+        .style("height", "auto");
+
+        svg.append("path")
+          .datum({ type: "Sphere" })
+          .attr("d", path)
+          .style("fill", "#9ACBE3");
+
+        svg.append("path")
+          .datum(d3.geoGraticule10())
+          .attr("d", path)
+          .style("fill", "none")
+          .style("stroke", "white")
+          .style("stroke-width", .8)
+          .style("stroke-opacity", .5)
+          .style("stroke-dasharray", 2);
+
+        svg.append("path")
+          .datum(countriesFeature)
+          .attr("fill", "white")
+          .style("fill-opacity", .5)
+          .attr("d", path);
+
+        const usFeature = countriesFeature.features.find(f => f.properties.name === "United States of America");
+        svg.append("path")
+          .datum(usFeature)
+          .attr("fill", "none")
+          .attr("stroke", "black")
+          .attr("stroke-width", 1.5)
+          .attr("d", path);
+
+        return;
+      }
 
       const countryCentroids = new Map();
       countriesFeature.features.forEach(feature => {
