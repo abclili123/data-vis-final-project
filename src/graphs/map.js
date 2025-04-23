@@ -7,8 +7,9 @@ const MapChart = ({ data, selectedYears }) => {
   const tooltipRef = useRef();
 
   useEffect(() => {
-    if (!data || data.length === 0 || selectedYears.length !== 2) return;
+    if (!data || data.length === 0 || selectedYears.length === 0) return;
 
+    const isSingleYear = selectedYears.length === 1;
     const width = 800;
     const height = 400;
 
@@ -62,12 +63,15 @@ const MapChart = ({ data, selectedYears }) => {
         return +str || 0;
       };
 
+      const yearA = selectedYears[0];
+      const yearB = selectedYears[1];
+
       const rawData = data.map(d => {
         const normalizedName = countryNameMap[d.Country] || d.Country;
         const coords = countryCentroids.get(normalizedName);
         const local = { hasDefaultValue: false };
-        const valueStart = parseValue(d[selectedYears[0]], local);
-        const valueEnd = parseValue(d[selectedYears[1]], local);
+        const valueStart = parseValue(d[yearA], local);
+        const valueEnd = yearB ? parseValue(d[yearB], local) : valueStart;
 
         if (!coords) {
           missingCentroids.push({
@@ -95,8 +99,6 @@ const MapChart = ({ data, selectedYears }) => {
         };
       }).filter(d => d.x !== null && d.y !== null);
 
-      console.warn("Missing centroids:", missingCentroids);
-
       const radius = d3.scaleSqrt()
         .domain([0, d3.max(rawData, d => Math.max(d.valueStart, d.valueEnd))])
         .range([0, 30]);
@@ -115,11 +117,7 @@ const MapChart = ({ data, selectedYears }) => {
         angle: 15
       };
 
-      const setSimulatedPositions = (data, yearType) => {
-        const valueKey = yearType === 'start' ? 'valueStart' : 'valueEnd';
-        const xKey = yearType === 'start' ? 'xSimStart' : 'xSimEnd';
-        const yKey = yearType === 'start' ? 'ySimStart' : 'ySimEnd';
-
+      const setSimulatedPositions = (data, valueKey, xKey, yKey) => {
         data.forEach(d => {
           d.value = d[valueKey];
           d.x = d.originalX;
@@ -164,14 +162,24 @@ const MapChart = ({ data, selectedYears }) => {
         sim.stop();
       };
 
-      setSimulatedPositions(rawData, 'start');
-      setSimulatedPositions(rawData, 'end');
+      if (isSingleYear) {
+        setSimulatedPositions(rawData, 'valueStart', 'xSimStart', 'ySimStart');
 
-      rawData.forEach(d => {
-        d.x = d.xSimStart;
-        d.y = d.ySimStart;
-        d.value = d.valueStart;
-      });
+        rawData.forEach(d => {
+          d.x = d.xSimStart;
+          d.y = d.ySimStart;
+          d.value = d.valueStart;
+        });
+      } else {
+        setSimulatedPositions(rawData, 'valueStart', 'xSimStart', 'ySimStart');
+        setSimulatedPositions(rawData, 'valueEnd', 'xSimEnd', 'ySimEnd');
+
+        rawData.forEach(d => {
+          d.x = d.xSimStart;
+          d.y = d.ySimStart;
+          d.value = d.valueStart;
+        });
+      }
 
       svg.attr("viewBox", [0, 0, width - 100, height - 100])
         .style("width", "100%")
@@ -205,59 +213,21 @@ const MapChart = ({ data, selectedYears }) => {
         .attr("stroke-width", 1.5)
         .attr("d", path);
 
-        const labelGroup = svg.append("g")
+      const labelGroup = svg.append("g")
         .attr("transform", `translate(${usBox.cx},${usBox.cy-5})`);
-      
+
       const totalText = labelGroup.append("text")
         .attr("text-anchor", "middle")
         .attr("dominant-baseline", "middle")
         .attr("font-family", "sans-serif")
         .attr("font-size", 12)
-        .attr("fill", "black")
-        .text("");
-
-      const groups = svg.selectAll("g.country-group")
-        .data(rawData)
-        .enter()
-        .append("g")
-        .attr("class", "country-group")
-        .attr("transform", d => `translate(${d.x},${d.y})`)
-        .on("mouseenter", (event, d) => {
-          tooltip
-            .style("display", "block")
-            .html(`<strong>${d.id}</strong><br/>${d.hasDefaultValue ? 'Unknown' : Math.round(d.value).toLocaleString()}`);
-        })
-        .on("mousemove", (event) => {
-          tooltip
-            .style("left", (event.pageX) + "px")
-            .style("top", (event.pageY) + "px");
-        })
-        .on("mouseleave", () => {
-          tooltip.style("display", "none");
-        });
-
-      const circles = groups.append("circle")
-        .attr("r", d => radius(d.valueStart))
-        .attr("fill", d => regionColor(d.region))
-        .attr("fill-opacity", 0.9)
-        .attr("stroke", d => d.hasDefaultValue ? "white" : "#fff")
-        .attr("stroke-width", 0.5)
-        .attr("stroke-dasharray", d => d.hasDefaultValue ? "4,2" : null);
-
-      groups.append("text")
-        .text(d => d.id)
-        .attr("text-anchor", "middle")
-        .attr("dominant-baseline", "middle")
-        .attr("font-family", "sans-serif")
-        .attr("font-weight", "normal")
-        .attr("fill", "white")
-        .style("font-size", d => `${radius(d.valueStart) * 0.8}px`);
+        .attr("fill", "black");
 
       const updateTotalLabel = (year, total) => {
         const formattedTotal = Math.round(total).toLocaleString();
-      
+
         const updateTspans = totalText.selectAll("tspan").data([year, formattedTotal]);
-      
+
         updateTspans.join(
           enter => enter.append("tspan")
             .attr("x", 0)
@@ -282,30 +252,72 @@ const MapChart = ({ data, selectedYears }) => {
         );
       };
 
-      d3.interval(() => {
-        rawData.forEach(d => {
-          const isStart = d.value === d.valueStart;
-          d.value = isStart ? d.valueEnd : d.valueStart;
-          d.x = isStart ? d.xSimEnd : d.xSimStart;
-          d.y = isStart ? d.ySimEnd : d.ySimStart;
-          const currentYear = isStart ? selectedYears[1] : selectedYears[0];
-          const currentTotal = d3.sum(rawData.filter(d => !d.hasDefaultValue), d => d.value);
-          updateTotalLabel(currentYear, currentTotal);
+      const total = d3.sum(rawData.filter(d => !d.hasDefaultValue), d => d.value);
+      updateTotalLabel(yearA, total);
+
+      const groups = svg.selectAll("g.country-group")
+        .data(rawData)
+        .enter()
+        .append("g")
+        .attr("class", "country-group")
+        .attr("transform", d => `translate(${d.x},${d.y})`)
+        .on("mouseenter", (event, d) => {
+          tooltip
+            .style("display", "block")
+            .html(`<strong>${d.id}</strong><br/>${d.hasDefaultValue ? 'Unknown' : Math.round(d.value).toLocaleString()}`);
+        })
+        .on("mousemove", (event) => {
+          tooltip
+            .style("left", (event.pageX) + "px")
+            .style("top", (event.pageY) + "px");
+        })
+        .on("mouseleave", () => {
+          tooltip.style("display", "none");
         });
 
-        circles.transition()
-          .duration(1000)
-          .attr("r", d => radius(d.value));
+      const circles = groups.append("circle")
+        .attr("r", d => radius(d.value))
+        .attr("fill", d => regionColor(d.region))
+        .attr("fill-opacity", 0.9)
+        .attr("stroke", d => d.hasDefaultValue ? "white" : "#fff")
+        .attr("stroke-width", 0.5)
+        .attr("stroke-dasharray", d => d.hasDefaultValue ? "4,2" : null);
 
-        groups.transition()
-          .duration(1000)
-          .attr("transform", d => `translate(${d.x},${d.y})`);
+      groups.append("text")
+        .text(d => d.id)
+        .attr("text-anchor", "middle")
+        .attr("dominant-baseline", "middle")
+        .attr("font-family", "sans-serif")
+        .attr("font-weight", "normal")
+        .attr("fill", "white")
+        .style("font-size", d => `${radius(d.value) * 0.8}px`);
 
-        groups.select("text")
-          .transition()
-          .duration(1000)
-          .style("font-size", d => `${radius(d.value) * 0.8}px`);
-      }, 5000);
+      if (!isSingleYear) {
+        d3.interval(() => {
+          rawData.forEach(d => {
+            const isStart = d.value === d.valueStart;
+            d.value = isStart ? d.valueEnd : d.valueStart;
+            d.x = isStart ? d.xSimEnd : d.xSimStart;
+            d.y = isStart ? d.ySimEnd : d.ySimStart;
+            const currentYear = isStart ? yearB : yearA;
+            const currentTotal = d3.sum(rawData.filter(d => !d.hasDefaultValue), d => d.value);
+            updateTotalLabel(currentYear, currentTotal);
+          });
+
+          circles.transition()
+            .duration(1000)
+            .attr("r", d => radius(d.value));
+
+          groups.transition()
+            .duration(1000)
+            .attr("transform", d => `translate(${d.x},${d.y})`);
+
+          groups.select("text")
+            .transition()
+            .duration(1000)
+            .style("font-size", d => `${radius(d.value) * 0.8}px`);
+        }, 5000);
+      }
     });
   }, [data, selectedYears]);
 
