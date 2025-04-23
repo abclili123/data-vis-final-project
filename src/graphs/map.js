@@ -30,16 +30,52 @@ const MapChart = ({ data, selectedYear }) => {
         }
       });
 
+      const countryNameMap = {
+        "Bosnia and Herzegovina": "Bosnia and Herz.",
+        "Burma": "Myanmar",
+        "Central African Republic": "Central African Rep.",
+        "China, People's Republic": "China",
+        "Congo, Democratic Republic": "Dem. Rep. Congo",
+        "Congo, Republic": "Congo",
+        "Cote d'Ivoire": "Côte d'Ivoire",
+        "Dominican Republic": "Dominican Rep.",
+        "North Macedonia": "Macedonia",
+        "South Sudan": "S. Sudan"
+      };
+      
+      const missingCentroids = [];
+
+      const parseValue = str => {
+        if (typeof str === 'string') {
+          return +str.replace(/,/g, '') || 0;
+        }
+        return +str || 0;
+      };
+      
       const rawData = data.map(d => {
-        const coords = countryCentroids.get(d.Country);
+        const normalizedName = countryNameMap[d.Country] || d.Country;
+        const coords = countryCentroids.get(normalizedName);
+        const value = parseValue(d[selectedYear]);
+        if (!coords) {
+          missingCentroids.push({
+            Country: d.Country,
+            Region: d.Region,
+            Value: value
+          });
+        }
         return {
-          id: d.Country,
+          id: normalizedName,
           region: d.Region,
-          value: +d[selectedYear] || 0,
+          value: value,
           x: coords ? coords[0] : null,
-          y: coords ? coords[1] : null
+          y: coords ? coords[1] : null,
+          originalX: coords ? coords[0] : null,
+          originalY: coords ? coords[1] : null
         };
       }).filter(d => d.x !== null && d.y !== null);
+      
+      console.warn("Missing centroids:", missingCentroids);
+      console.log(rawData)
 
       const radius = d3.scaleSqrt()
         .domain([0, d3.max(rawData, d => d.value)])
@@ -81,15 +117,46 @@ const MapChart = ({ data, selectedYear }) => {
         .domain([...new Set(rawData.map(d => d.region))])
         .range(d3.schemeTableau10);
 
+      const tooltip = d3.select(tooltipRef.current);
+
+      // Approximate bounding box for the contiguous US in projected coordinates
+      const usBox = {
+        cx: 200, // center x
+        cy: 76, // center y
+        width: 70,
+        height: 40,
+        angle: 15 // degrees
+      };
+
       const simulation = d3.forceSimulation(rawData)
-        .force("x", d3.forceX(d => d.x).strength(0.5))
-        .force("y", d3.forceY(d => d.y).strength(0.5))
-        .force("collide", d3.forceCollide(d => radius(d.value) + 1))
-        .stop();
+      .force("x", d3.forceX(d => d.x).strength(0.5))
+      .force("y", d3.forceY(d => d.y).strength(0.5))
+      .force("collide", d3.forceCollide(d => radius(d.value) + 1))
+      .force("avoidRotatedUSBox", () => {
+        const angle = (usBox.angle * Math.PI) / 180;
+        const cosA = Math.cos(-angle);
+        const sinA = Math.sin(-angle);
+
+        rawData.forEach(d => {
+          const r = radius(d.value);
+          const dx = d.x - usBox.cx;
+          const dy = d.y - usBox.cy;
+          const rx = dx * cosA - dy * sinA;
+          const ry = dx * sinA + dy * cosA;
+
+          const hw = usBox.width / 2;
+          const hh = usBox.height / 2;
+
+          if (rx + r > -hw && rx - r < hw && ry + r > -hh && ry - r < hh) {
+            const len = Math.sqrt(dx * dx + dy * dy) || 1;
+            const strength = 2;
+            d.vx += (dx / len) * strength;
+            d.vy += (dy / len) * strength;
+          }
+        });
+      });
 
       for (let i = 0; i < 300; i++) simulation.tick();
-
-      const tooltip = d3.select(tooltipRef.current);
 
       const groups = svg.selectAll("g.country-group")
         .data(rawData)
@@ -104,8 +171,8 @@ const MapChart = ({ data, selectedYear }) => {
         })
         .on("mousemove", (event) => {
           tooltip
-            .style("left", (event.pageX + 10) + "px")
-            .style("top", (event.pageY - 28) + "px");
+            .style("left", (event.pageX) + "px")
+            .style("top", (event.pageY) + "px");
         })
         .on("mouseleave", () => {
           tooltip.style("display", "none");
@@ -130,7 +197,7 @@ const MapChart = ({ data, selectedYear }) => {
   }, [data, selectedYear]);
 
   return (
-    <div className="aspect-ratio-box">
+    <div>
       <svg ref={ref}></svg>
       <div
         ref={tooltipRef}
