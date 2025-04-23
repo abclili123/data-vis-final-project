@@ -10,8 +10,8 @@ useEffect(() => {
     if (!data || data.length === 0) return;
 
     const isSingleYear = selectedYears.length === 1
-    const width = 800;
-    const height = 400;
+    const width = 500;
+    const height = 350;
 
     d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json").then(world => {
       const svg = d3.select(ref.current);
@@ -358,7 +358,7 @@ useEffect(() => {
   }, [data, selectedYears]);
 
   return (
-    <div>
+    <div style={{ padding: '20px', position: 'relative' }}>
       <svg ref={ref}></svg>
       <div
         ref={tooltipRef}

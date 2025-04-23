@@ -19,13 +19,19 @@ function App() {
   }, []);
 
   return (
-    <div className="App">
-      <Overview
-        data={countryByYearData}
-        selectedYears={selectedYears}
-        setSelectedYears={setSelectedYears}
-      />
-      <MapChart data={countryByYearData} selectedYears={selectedYears} />
+    <div className="App" style={{ padding: '20px', position: 'relative' }}>
+      <div style={{ display: 'flex', gap: '1rem' }}>
+        <div style={{ flex: 1 , border: "solid 1px red" }}>
+          <Overview
+            data={countryByYearData}
+            selectedYears={selectedYears}
+            setSelectedYears={setSelectedYears}
+          />
+        </div>
+        <div style={{ flex: 2, border: "solid 1px blue" }}>
+          <MapChart data={countryByYearData} selectedYears={selectedYears} />
+        </div>
+      </div>
     </div>
   );
 }
