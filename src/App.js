@@ -6,6 +6,7 @@ import React, { useEffect, useState } from 'react';
 
 import Overview from './graphs/overview';
 import MapChart from './graphs/map';
+import SankeyChart from './graphs/sankey';
 
 function App() {
   const [countryByYearData, setCountryByYearData] = useState([]);
@@ -34,6 +35,11 @@ function App() {
           <MapChart data={countryByYearData} selectedYears={selectedYears} selectedRegions={selectedRegions}/>
         </div>
       </div>
+      <SankeyChart
+        data={countryByYearData}
+        selectedYears={selectedYears}
+        selectedRegions={selectedRegions}
+      />
     </div>
   );
 }
