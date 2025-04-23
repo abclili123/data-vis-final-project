@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 
-const Overview = ({ data, setSelectedYear, setSelectedRegionData }) => {
+const Overview = ({ data, selectedYears, setSelectedYears }) => {
   const svgRef = useRef();
   const tooltipRef = useRef();
 
@@ -67,20 +67,7 @@ const Overview = ({ data, setSelectedYear, setSelectedRegionData }) => {
       .attr("x", d => x(d.data.year))
       .attr("y", d => y(d[1]))
       .attr("height", d => y(d[0]) - y(d[1]))
-      .attr("width", x.bandwidth())
-      .on("click", (event, d) => {
-        const year = d.data.year;
-        const region = d.key;
-
-        const countries = data.filter(row => {
-          const rawValue = row[year];
-          const numeric = +rawValue?.replace(/,/g, "");
-          return row.Region === region && (isNaN(numeric) || numeric !== 0);
-        });
-
-        setSelectedYear(+year);
-        setSelectedRegionData(countries);
-      });
+      .attr("width", x.bandwidth());
 
     // Tooltip
     const tooltip = d3.select(tooltipRef.current);
@@ -130,36 +117,64 @@ const Overview = ({ data, setSelectedYear, setSelectedRegionData }) => {
           }
         }
       })
-      .on("mouseleave", () => tooltip.style("opacity", 0))
-      .on("click", function (event, d) {
-        const [mouseX, mouseY] = d3.pointer(event);
-        let y0 = y(0);
-        let clickedRegion = null;
-        for (const region of regions) {
-          const value = d[region];
-          const y1 = y0;
-          y0 = y0 - (y(0) - y(value));
-          if (mouseY >= y0 && mouseY < y1) {
-            clickedRegion = region;
-            break;
-          }
-        }
-        if (clickedRegion) {
-          const year = d.year.toString();
-          const countries = data.filter(row => {
-            const raw = row[year];
-            const numeric = +raw?.replace(/,/g, "");
-            return row.Region === clickedRegion && (isNaN(numeric) || numeric !== 0);
-          });
-          setSelectedYear(+year);
-          setSelectedRegionData(countries);
-        }
-      });
+      .on("mouseleave", () => tooltip.style("opacity", 0));
 
     // Axes
     svg.append("g")
       .attr("transform", `translate(0,${height - margin.bottom})`)
       .call(d3.axisBottom(x));
+
+    // Year selector line and dots directly under axis
+    const timelineY = height - margin.bottom + 30;
+    const getBarCenter = d => x(d) + x.bandwidth() / 2;
+
+    svg.append("line")
+      .attr("x1", getBarCenter(years[0]))
+      .attr("x2", getBarCenter(years[years.length - 1]))
+      .attr("y1", timelineY)
+      .attr("y2", timelineY)
+      .attr("stroke", "#ddd")
+      .attr("stroke-width", 4);
+
+    if (selectedYears.length === 2) {
+      svg.append("line")
+        .attr("x1", getBarCenter(selectedYears[0]))
+        .attr("x2", getBarCenter(selectedYears[1]))
+        .attr("y1", timelineY)
+        .attr("y2", timelineY)
+        .attr("stroke", "#4CAF50")
+        .attr("stroke-width", 4);
+    }   
+
+    svg.selectAll("circle.year-dot")
+      .data(years)
+      .join("circle")
+      .attr("class", "year-dot")
+      .attr("cx", d => getBarCenter(d))
+      .attr("cy", timelineY)
+      .attr("r", 6)
+      .attr("fill", d => {
+        if (selectedYears.length === 2) {
+          return d >= selectedYears[0] && d <= selectedYears[1] ? '#4CAF50' : '#fff';
+        } else {
+          return selectedYears.includes(d) ? '#4CAF50' : '#fff';
+        }
+      })
+      .attr("stroke", "#4CAF50")
+      .attr("stroke-width", 2)
+      .style("cursor", "pointer")
+      .on("click", (_, d) => {
+        let updated;
+        if (selectedYears.includes(d)) {
+          updated = selectedYears.filter(year => year !== d);
+        } else if (selectedYears.length < 2) {
+          updated = [...selectedYears, d].sort((a, b) => a - b);
+        } else {
+          updated = [d];
+        }
+        console.log("Selected years:", updated);
+        setSelectedYears(updated);
+      });
 
     svg.append("g")
       .attr("transform", `translate(${margin.left},0)`)
@@ -181,7 +196,7 @@ const Overview = ({ data, setSelectedYear, setSelectedRegionData }) => {
         .text(region)
         .style("font-size", "12px");
     });
-  }, [data, setSelectedYear, setSelectedRegionData]);
+  }, [data, selectedYears]);
 
   return (
     <>
