@@ -4,9 +4,9 @@ import * as d3 from 'd3';
 
 import React, { useEffect, useState } from 'react';
 
-import Overview from './graphs/overview';
-import MapChart from './graphs/map';
-import SankeyChart from './graphs/sankey';
+import Overview from './components/overview';
+import MapChart from './components/map';
+import SankeyChart from './components/sankey';
 
 function App() {
   const [countryByYearData, setCountryByYearData] = useState([]);
