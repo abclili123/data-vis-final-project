@@ -4,9 +4,10 @@ import * as d3 from 'd3';
 
 import React, { useEffect, useState } from 'react';
 
-import Overview from './graphs/overview';
-import MapChart from './graphs/map';
-import CountryStory from './components/CountryStory';
+import Overview from './graphs/overview';      // your original graphs path
+import MapChart from './graphs/map';            // your original graphs path
+import CountryStory from './components/CountryStory'; // your CountryStory
+import SankeyChart from './components/sankey';  // new SankeyChart from incoming
 
 function App() {
   const [countryByYearData, setCountryByYearData] = useState([]);
@@ -27,6 +28,7 @@ function App() {
 
   return (
     <div className="App" style={{ padding: '20px', position: 'relative' }}>
+      
       {/* Render CountryStory components dynamically */}
       {countryStories.map((story, index) => (
         <CountryStory
@@ -37,8 +39,9 @@ function App() {
         />
       ))}
 
-      <div style={{ display: 'flex', gap: '1rem' }}>
-        <div style={{ flex: 1, border: 'solid 1px red' }}>
+      {/* Graphs and Map section */}
+      <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
+        <div style={{ flex: 1, border: 'solid 1px red', padding: '10px' }}>
           <Overview
             data={countryByYearData}
             selectedYears={selectedYears}
@@ -46,7 +49,8 @@ function App() {
             setSelectedRegions={setSelectedRegions}
           />
         </div>
-        <div style={{ flex: 2, border: 'solid 1px blue' }}>
+
+        <div style={{ flex: 2, border: 'solid 1px blue', padding: '10px' }}>
           <MapChart
             data={countryByYearData}
             selectedYears={selectedYears}
@@ -54,9 +58,18 @@ function App() {
           />
         </div>
       </div>
+
+      {/* SankeyChart section */}
+      <div style={{ flex: 1, border: 'solid 1px purple', marginTop: '2rem', padding: '10px' }}>
+        <SankeyChart
+          data={countryByYearData}
+          selectedYears={selectedYears}
+          selectedRegions={selectedRegions}
+        />
+      </div>
+
     </div>
   );
 }
 
 export default App;
-

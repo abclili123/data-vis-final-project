@@ -1,0 +1,241 @@
+import React, { useEffect, useRef } from 'react';
+import * as d3 from 'd3';
+
+const SankeyChart = ({ data, selectedYears, selectedRegions }) => {
+  const svgRef = useRef();
+
+  const parseValue = (str, d) => {
+    if (typeof str === 'string') {
+      if (str.trim() === 'D') {
+        d.hasDefaultValue = true;
+        return 50;
+      }
+      const cleaned = str.replace(/,/g, '');
+      const num = +cleaned;
+      return isNaN(num) ? 0 : num;
+    }
+    return +str || 0;
+  };
+
+  useEffect(() => {
+    if (!data || selectedYears.length < 2 || selectedRegions.length === 0) return;
+
+    const filtered = data.filter(d => selectedRegions.includes(d.Region));
+
+    const width = 875;
+    const height = 600;
+    const margin = { top: 20, right: 250, bottom: 80, left: 250 };
+    const innerWidth = 300;
+    const yearSpacing = innerWidth / (selectedYears.length - 1);
+    const nodeWidth = 10;
+    const maxBarHeight = height - margin.top - margin.bottom;
+
+    const nodeMap = new Map();
+    const nodes = [];
+    const links = [];
+
+    const svg = d3.select(svgRef.current);
+    svg.selectAll('*').remove();
+    svg.attr('width', width).attr('height', height);
+
+    const offsetX = (width - innerWidth) / 2;
+    const container = svg.append('g').attr('transform', `translate(${offsetX},${margin.top})`);
+
+    const yearCountryMap = new Map();
+
+    selectedYears.forEach(year => {
+      const yearData = [];
+      filtered.forEach(d => {
+        const val = parseValue(d[year], d);
+        if (val > 0) {
+          const name = `${d.Country} ${year}`;
+          yearData.push({ name, value: val, country: d.Country, year });
+        }
+      });
+      yearData.sort((a, b) => b.value - a.value);
+      yearCountryMap.set(year, yearData);
+    });
+
+    const countryColor = d3.scaleOrdinal(d3.schemeCategory10);
+    const countryY = {};
+
+    selectedYears.forEach((year, yearIndex) => {
+      const column = yearCountryMap.get(year);
+      let yOffset = 0;
+      column.forEach(entry => {
+        const heightScale = maxBarHeight / d3.sum(column, d => d.value);
+        const h = entry.value * heightScale;
+        const node = {
+          name: entry.name,
+          country: entry.country,
+          year,
+          value: entry.value,
+          x0: yearSpacing * yearIndex,
+          x1: yearSpacing * yearIndex + nodeWidth,
+          y0: yOffset,
+          y1: yOffset + h,
+        };
+        yOffset += h + 2;
+        countryY[`${entry.country}_${year}`] = [node.y0, node.y1];
+        nodeMap.set(entry.name, node);
+        nodes.push(node);
+      });
+    });
+
+    filtered.forEach(d => {
+      for (let i = 0; i < selectedYears.length - 1; i++) {
+        const yearA = selectedYears[i];
+        const yearB = selectedYears[i + 1];
+        const valueA = parseValue(d[yearA], d);
+        const valueB = parseValue(d[yearB], d);
+        if (valueA > 0 && valueB > 0) {
+          const source = nodeMap.get(`${d.Country} ${yearA}`);
+          const target = nodeMap.get(`${d.Country} ${yearB}`);
+          if (source && target) {
+            links.push({ source, target, value: valueB });
+          }
+        }
+      }
+    });
+
+    const linkGroup = container.append('g');
+    const nodeGroup = container.append('g');
+
+    let activeElement = null;
+
+    const resetHighlight = () => {
+      nodeElements.attr('fill-opacity', 1);
+      linkElements.attr('stroke-opacity', 0.4);
+      activeElement = null;
+    };
+
+    const linkElements = linkGroup.selectAll('path')
+      .data(links)
+      .join('path')
+      .attr('d', d => {
+        const x0 = d.source.x1;
+        const x1 = d.target.x0;
+        const y0 = (d.source.y0 + d.source.y1) / 2;
+        const y1 = (d.target.y0 + d.target.y1) / 2;
+        const width0 = d.source.y1 - d.source.y0;
+        const width1 = d.target.y1 - d.target.y0;
+
+        const path = `M${x0},${y0 - width0 / 2}
+          C${(x0 + x1) / 2},${y0 - width0 / 2}
+           ${(x0 + x1) / 2},${y1 - width1 / 2}
+           ${x1},${y1 - width1 / 2}
+          L${x1},${y1 + width1 / 2}
+          C${(x0 + x1) / 2},${y1 + width1 / 2}
+           ${(x0 + x1) / 2},${y0 + width0 / 2}
+           ${x0},${y0 + width0 / 2}Z`;
+        return path;
+      })
+      .attr('fill', d => countryColor(d.source.country))
+      .attr('fill-opacity', 0.4)
+      .on('click', function (event, d) {
+        if (activeElement === d) {
+          resetHighlight();
+        } else {
+          activeElement = d;
+          linkElements.attr('stroke-opacity', l => l === d ? 1 : 0.1);
+          nodeElements.attr('fill-opacity', n => n.name === d.source.name || n.name === d.target.name ? 1 : 0.1);
+        }
+      });
+
+    const nodeElements = nodeGroup.selectAll('rect')
+      .data(nodes)
+      .join('rect')
+      .attr('x', d => d.x0)
+      .attr('y', d => d.y0)
+      .attr('width', nodeWidth)
+      .attr('height', d => d.y1 - d.y0)
+      .attr('fill', d => countryColor(d.country))
+      .attr('fill-opacity', 1)
+      .on('click', function (event, d) {
+        if (activeElement === d) {
+          resetHighlight();
+        } else {
+          activeElement = d;
+          nodeElements.attr('fill-opacity', n => n === d ? 1 : 0.1);
+          linkElements.attr('stroke-opacity', l => l.source.name === d.name || l.target.name === d.name ? 1 : 0.1);
+        }
+      });
+
+    container.append('g')
+      .selectAll('text.year-label')
+      .data(selectedYears)
+      .join('text')
+      .attr('class', 'year-label')
+      .attr('x', (d, i) => yearSpacing * i + nodeWidth / 2)
+      .attr('y', maxBarHeight + 40)
+      .attr('text-anchor', 'middle')
+      .text(d => d);
+
+    const labelSpacing = 14;
+    const leftNodes = nodes.filter(d => d.year === selectedYears[0]);
+    const rightNodes = nodes.filter(d => d.year === selectedYears[selectedYears.length - 1]);
+
+    leftNodes.forEach((d, i) => {
+      const labelX = d.x0 - 70;
+      const labelY = 40 + i * labelSpacing;
+
+      container.append('text')
+        .attr('x', labelX)
+        .attr('y', labelY)
+        .attr('text-anchor', 'end')
+        .attr('alignment-baseline', 'middle')
+        .text(d.country)
+        .on('click', () => {
+          if (activeElement === d) {
+            resetHighlight();
+          } else {
+            activeElement = d;
+            nodeElements.attr('fill-opacity', n => n.name === d.name ? 1 : 0.1);
+            linkElements.attr('stroke-opacity', l => l.source.name === d.name || l.target.name === d.name ? 1 : 0.1);
+          }
+        });
+
+      container.append('line')
+        .attr('x1', labelX + 10)
+        .attr('y1', labelY)
+        .attr('x2', d.x0)
+        .attr('y2', (d.y0 + d.y1) / 2)
+        .attr('stroke', '#555')
+        .attr('stroke-width', 1);
+    });
+
+    rightNodes.forEach((d, i) => {
+      const labelX = d.x1 + 70;
+      const labelY = 40 + i * labelSpacing;
+
+      container.append('text')
+        .attr('x', labelX)
+        .attr('y', labelY)
+        .attr('text-anchor', 'start')
+        .attr('alignment-baseline', 'middle')
+        .text(d.country)
+        .on('click', () => {
+          if (activeElement === d) {
+            resetHighlight();
+          } else {
+            activeElement = d;
+            nodeElements.attr('fill-opacity', n => n.name === d.name ? 1 : 0.1);
+            linkElements.attr('stroke-opacity', l => l.source.name === d.name || l.target.name === d.name ? 1 : 0.1);
+          }
+        });
+
+      container.append('line')
+        .attr('x1', d.x1)
+        .attr('y1', (d.y0 + d.y1) / 2)
+        .attr('x2', labelX - 10)
+        .attr('y2', labelY)
+        .attr('stroke', '#555')
+        .attr('stroke-width', 1);
+    });
+
+  }, [data, selectedYears, selectedRegions]);
+
+  return <svg ref={svgRef}></svg>;
+};
+
+export default SankeyChart;
