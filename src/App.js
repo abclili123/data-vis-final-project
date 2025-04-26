@@ -4,8 +4,8 @@ import * as d3 from 'd3';
 
 import React, { useEffect, useState } from 'react';
 
-import Overview from './graphs/overview';      // your original graphs path
-import MapChart from './graphs/map';            // your original graphs path
+import Overview from './components/overview';      // your original graphs path
+import MapChart from './components/map';            // your original graphs path
 import CountryStory from './components/CountryStory'; // your CountryStory
 import SankeyChart from './components/sankey';  // new SankeyChart from incoming
 
