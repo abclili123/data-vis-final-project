@@ -2,7 +2,7 @@ import './App.css';
 
 import * as d3 from 'd3';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 
 import Overview from './components/overview';      // your original graphs path
 import MapChart from './components/map';            // your original graphs path
@@ -15,6 +15,7 @@ function App() {
   const [selectedYears, setSelectedYears] = useState([]);
   const [selectedRegions, setSelectedRegions] = useState([]);
   const [countryStories, setCountryStories] = useState([]);
+  const storyRefs = useRef({}); // Initialize useRef for storyRefs
 
   // Load data once on mount
   useEffect(() => {
@@ -30,14 +31,23 @@ function App() {
     <div className="App" style={{ padding: '20px', position: 'relative' }}>
       
       {/* Render CountryStory components dynamically */}
-      {countryStories.map((story, index) => (
-        <CountryStory
-          key={index}
-          country={story.country}
-          anecdote={story.anecdote}
-          headlines={story.headlines}
-        />
-      ))}
+      <div style={{ marginBottom: '40px' }}>
+        <h2>Stories</h2>
+        {countryStories.map((story, index) => (
+          <div
+            key={index}
+            ref={(el) => (storyRefs.current[story.country] = el)}
+          >
+            <CountryStory
+              country={story.country}
+              year={story.year}
+              image={story.image} // Ensure the image prop is passed correctly
+              anecdote={story.anecdote}
+              headlines={story.headlines}
+            />
+          </div>
+        ))}
+      </div>
 
       {/* Graphs and Map section */}
       <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
