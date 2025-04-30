@@ -2,12 +2,24 @@
   {
     "country": "Venezuela",
     "year": 2016,
-    "image": "/images/image.png",
+    "image": "/images/venezuela.png",
     "anecdote": "So far in fiscal 2016, Venezuela trails only China (11,826) and Mexico (10,749) in asylum applications to the U.S. Venezuela’s monthly asylum applications reached 1,370 in June 2016, a sharp change from two years ago: In February 2014, only 92 Venezuelans applied for asylum.",
     "headlines": [
       {
         "text": "Pew Research, Venezuelan asylum applications to U.S. soar in 2016",
         "url": "https://www.pewresearch.org/short-reads/2016/08/04/venezuelan-asylum-applications-to-u-s-soar-in-2016/#:~:text=Venezuela%20is%20now%20among%20the,in%20the%20process%20of%20deportation."
+      }
+    ]
+  },
+  {
+    "country": "Russia",
+    "year": 2018,
+    "image": "/images/russia.png",
+    "anecdote": "Vlad, a gay Russian applicant in his 30s, told RFE/RL that he was simply looking to move somewhere where he could live 'more freely,' and that a lawyer suggested U.S. asylum as an option. He said his family is not aware that he is gay and asked that his last name not be published.",
+    "headlines": [
+      {
+        "text": "Russian Asylum Applications In U.S. Hit 24-Year Record",
+        "url": "https://www.rferl.org/a/russian-asylum-applications-in-u-s-hit-24-year-record/29204843.html"
       }
     ]
   }
