@@ -8,6 +8,7 @@ import Overview from './components/overview';      // your original graphs path
 import MapChart from './components/map';            // your original graphs path
 import CountryStory from './components/CountryStory'; // your CountryStory
 import SankeyChart from './components/sankey';  // new SankeyChart from incoming
+import IntroStory from './components/introStory';
 
 function App() {
   const [countryByYearData, setCountryByYearData] = useState([]);
@@ -30,6 +31,8 @@ function App() {
   return (
     <div className="App" style={{ padding: '20px', position: 'relative' }}>
       
+      <IntroStory />
+
       {/* Render CountryStory components dynamically */}
       <div style={{ marginBottom: '40px' }}>
         <h2>Stories</h2>
