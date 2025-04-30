@@ -8,6 +8,8 @@ import Overview from './components/overview';      // your original graphs path
 import MapChart from './components/map';            // your original graphs path
 import CountryStory from './components/CountryStory'; // your CountryStory
 import SankeyChart from './components/sankey';  // new SankeyChart from incoming
+import RegionArticleIframe from './components/news_preview';
+
 
 function App() {
   const [countryByYearData, setCountryByYearData] = useState([]);
@@ -76,6 +78,10 @@ function App() {
           selectedYears={selectedYears}
           selectedRegions={selectedRegions}
         />
+      </div>
+
+      <div>
+        <RegionArticleIframe selectedRegion={selectedRegions[0]} />
       </div>
 
     </div>
