@@ -44,6 +44,18 @@ const SankeyChart = ({ data, selectedYears, selectedRegions }) => {
       .append("g")
       .attr("transform", `translate(${offsetX},${margin.top})`);
 
+    const tooltip = container
+      .append("g")
+      .attr("class", "tooltip")
+      .style("display", "none");
+
+    tooltip
+      .append("text")
+      .attr("text-anchor", "middle")
+      .attr("alignment-baseline", "middle")
+      .style("font-size", "12px")
+      .style("fill", "#000");
+
     const yearCountryMap = new Map();
 
     selectedYears.forEach((year) => {
@@ -110,6 +122,28 @@ const SankeyChart = ({ data, selectedYears, selectedRegions }) => {
       nodeElements.attr("fill-opacity", 1);
       linkElements.attr("stroke-opacity", 0.4);
       activeElement = null;
+
+      tooltip.style("display", "none");
+    };
+
+    const showTooltip = (d, x, y) => {
+      tooltip.select("text").text(d.source ? d.source.country : d.country);
+
+      tooltip.attr("transform", `translate(${x},${y})`).style("display", null);
+
+      tooltip
+        .style("opacity", 0)
+        .transition()
+        .duration(300)
+        .style("opacity", 1);
+
+      setTimeout(() => {
+        tooltip
+          .transition()
+          .duration(500)
+          .style("opacity", 0)
+          .on("end", () => tooltip.style("display", "none"));
+      }, 2000);
     };
 
     const linkElements = linkGroup
@@ -125,13 +159,13 @@ const SankeyChart = ({ data, selectedYears, selectedRegions }) => {
         const width1 = d.target.y1 - d.target.y0;
 
         const path = `M${x0},${y0 - width0 / 2}
-          C${(x0 + x1) / 2},${y0 - width0 / 2}
-           ${(x0 + x1) / 2},${y1 - width1 / 2}
-           ${x1},${y1 - width1 / 2}
-          L${x1},${y1 + width1 / 2}
-          C${(x0 + x1) / 2},${y1 + width1 / 2}
-           ${(x0 + x1) / 2},${y0 + width0 / 2}
-           ${x0},${y0 + width0 / 2}Z`;
+        C${(x0 + x1) / 2},${y0 - width0 / 2}
+         ${(x0 + x1) / 2},${y1 - width1 / 2}
+         ${x1},${y1 - width1 / 2}
+        L${x1},${y1 + width1 / 2}
+        C${(x0 + x1) / 2},${y1 + width1 / 2}
+         ${(x0 + x1) / 2},${y0 + width0 / 2}
+         ${x0},${y0 + width0 / 2}Z`;
         return path;
       })
       .attr("fill", (d) => countryColor(d.source.country))
@@ -145,6 +179,14 @@ const SankeyChart = ({ data, selectedYears, selectedRegions }) => {
           nodeElements.attr("fill-opacity", (n) =>
             n.name === d.source.name || n.name === d.target.name ? 1 : 0.1
           );
+
+          const linkMidX = (d.source.x1 + d.target.x0) / 2;
+          const linkMidY =
+            ((d.source.y0 + d.source.y1) / 2 +
+              (d.target.y0 + d.target.y1) / 2) /
+            2;
+
+          showTooltip(d, linkMidX, linkMidY);
         }
       });
 
@@ -163,10 +205,14 @@ const SankeyChart = ({ data, selectedYears, selectedRegions }) => {
           resetHighlight();
         } else {
           activeElement = d;
-          nodeElements.attr("fill-opacity", (n) => (n === d ? 1 : 1));
+          nodeElements.attr("fill-opacity", (n) => (n === d ? 1 : 0.1));
           linkElements.attr("stroke-opacity", (l) =>
             l.source.name === d.name || l.target.name === d.name ? 1 : 0.1
           );
+
+          const nodeX = (d.x0 + d.x1) / 2;
+          const nodeY = (d.y0 + d.y1) / 2;
+          showTooltip(d, nodeX, nodeY);
         }
       });
 
@@ -268,6 +314,8 @@ const SankeyChart = ({ data, selectedYears, selectedRegions }) => {
                 ? 1
                 : 0.1
             );
+
+            showTooltip(d, d.x0 - 35, (d.y0 + d.y1) / 2);
           }
         })
         .on("mouseover", () => {
@@ -326,6 +374,8 @@ const SankeyChart = ({ data, selectedYears, selectedRegions }) => {
                 ? 1
                 : 0.1
             );
+
+            showTooltip(d, d.x1 + 35, (d.y0 + d.y1) / 2);
           }
         })
         .on("mouseover", () => {
