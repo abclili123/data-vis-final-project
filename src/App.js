@@ -56,8 +56,17 @@ function App() {
       </div>
 
       {/* Graphs and Map section */}
-      <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
-        <div style={{ flex: 1, border: 'solid 1px red', padding: '10px' }}>
+      <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem', height: '500px' }}>
+        <div
+          style={{
+            flex: 1,
+            padding: '10px',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            height: '100%',
+          }}
+        >
           <RefugeeQueryAdlib
             startYear={startYear}
             endYear={endYear}
@@ -68,7 +77,13 @@ function App() {
           />
         </div>
 
-        <div style={{ flex: 2, border: 'solid 1px blue', padding: '10px' }}>
+        <div
+          style={{
+            flex: 2,
+            padding: '10px',
+            height: '100%',
+          }}
+        >
           <MapChart
             data={countryByYearData}
             startYear={startYear}
@@ -77,6 +92,7 @@ function App() {
           />
         </div>
       </div>
+
 
       {/* SankeyChart section */}
       <div style={{ flex: 1, border: 'solid 1px purple', marginTop: '2rem', padding: '10px' }}>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import Select, { components } from 'react-select';
 
 const RefugeeQueryAdlib = ({
@@ -20,34 +20,39 @@ const RefugeeQueryAdlib = ({
   ];
   const yearOptions = years.map((y) => ({ value: y, label: y }));
 
-  const CustomMultiValue = (props) => {
-    return (
-      <div
+  // Reset endYear if it becomes invalid
+  useEffect(() => {
+    if (startYear && endYear && endYear <= startYear) {
+      setEndYear(null);
+    }
+  }, [startYear, endYear, setEndYear]);
+
+  const CustomMultiValue = (props) => (
+    <div
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        background: '#eef',
+        borderRadius: '16px',
+        padding: '2px 8px',
+        fontSize: '16px',
+        fontWeight: 600,
+      }}
+    >
+      <span>{props.data.label}</span>
+      <span
+        onClick={props.removeProps.onClick}
         style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          background: '#eef',
-          borderRadius: '16px',
-          padding: '2px 8px',
-          fontSize: '16px',
-          fontWeight: 600,
+          marginLeft: '8px',
+          cursor: 'pointer',
+          fontWeight: 'normal',
+          color: '#555',
         }}
       >
-        <span>{props.data.label}</span>
-        <span
-          onClick={props.removeProps.onClick}
-          style={{
-            marginLeft: '8px',
-            cursor: 'pointer',
-            fontWeight: 'normal',
-            color: '#555',
-          }}
-        >
-          ×
-        </span>
-      </div>
-    );
-  };
+        ×
+      </span>
+    </div>
+  );
 
   const regionSelectStyles = {
     control: (base) => ({
@@ -104,6 +109,9 @@ const RefugeeQueryAdlib = ({
     }),
   };
 
+  // Shared span style
+  const spanStyle = { fontWeight: 500, fontSize: '20px' };
+
   return (
     <div
       style={{
@@ -119,7 +127,7 @@ const RefugeeQueryAdlib = ({
         lineHeight: 1.6,
       }}
     >
-      <span>Show me data on refugees entering the U.S. from</span>
+      <span style={spanStyle}>Show me data on refugees entering the U.S. from</span>
 
       <Select
         isMulti
@@ -132,10 +140,10 @@ const RefugeeQueryAdlib = ({
         styles={regionSelectStyles}
       />
 
-      <span>between</span>
+      <span style={spanStyle}>between</span>
 
       <Select
-        options={yearOptions}
+        options={yearOptions.filter((opt) => opt.value < 2022)}
         value={startYear ? { value: startYear, label: startYear } : null}
         onChange={(selected) => setStartYear(selected?.value ?? null)}
         placeholder="Start year"
@@ -143,10 +151,10 @@ const RefugeeQueryAdlib = ({
         styles={yearSelectStyles}
       />
 
-      <span>and</span>
+      <span style={spanStyle}>and</span>
 
       <Select
-        options={yearOptions}
+        options={yearOptions.filter((opt) => !startYear || opt.value > startYear)}
         value={endYear ? { value: endYear, label: endYear } : null}
         onChange={(selected) => setEndYear(selected?.value ?? null)}
         placeholder="End year"
@@ -154,7 +162,7 @@ const RefugeeQueryAdlib = ({
         styles={yearSelectStyles}
       />
 
-      <span>.</span>
+      <span style={spanStyle}>.</span>
     </div>
   );
 };
