@@ -2,7 +2,7 @@ import './App.css';
 
 import * as d3 from 'd3';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import Overview from './components/overview';      // your original graphs path
 import MapChart from './components/map';            // your original graphs path
@@ -39,7 +39,7 @@ function App() {
         <CountryStoryCarousel stories={countryStories} />
       </div>
 
-      <div>
+      <div style={{ display: 'flex', justifyContent: 'center' }}>
         <Overview
           data={countryByYearData}
           selectedYears={selectedYears}
@@ -47,7 +47,6 @@ function App() {
           setSelectedRegions={setSelectedRegions}
         />
       </div>
-      
 
       {/* Graphs and Map section */}
       <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
