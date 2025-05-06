@@ -56,7 +56,7 @@ function App() {
       </div>
 
       {/* Graphs and Map section */}
-      <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem', height: '500px' }}>
+      <div style={{ display: 'flex', gap: '1rem', height: '500px' }}>
         <div
           style={{
             flex: 1,
