@@ -1,7 +1,8 @@
 import React, { useEffect, useRef } from "react";
 import * as d3 from "d3";
 
-const SankeyChart = ({ data, selectedYears, selectedRegions }) => {
+const SankeyChart = ({ data, startYear, endYear, selectedRegions }) => {
+  let selectedYears = [startYear, endYear]
   const svgRef = useRef();
 
   const parseValue = (str, d) => {
@@ -18,7 +19,7 @@ const SankeyChart = ({ data, selectedYears, selectedRegions }) => {
   };
 
   useEffect(() => {
-    if (!data || selectedYears.length < 2 || selectedRegions.length === 0)
+    if (!data || (!startYear && !endYear) || selectedRegions.length === 0)
       return;
 
     const filtered = data.filter((d) => selectedRegions.includes(d.Region));

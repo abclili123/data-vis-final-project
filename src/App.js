@@ -8,14 +8,15 @@ import Overview from './components/overview';      // your original graphs path
 import MapChart from './components/map';            // your original graphs path
 import { CountryStoryCarousel } from './components/CountryStory';
 import SankeyChart from './components/sankey';  // new SankeyChart from incoming
+import RefugeeQueryAdlib from './components/RefugeeQueryAdlib';
 
 import IntroStory from './components/introStory';
-
-import RegionArticleIframe from './components/news_preview';
 
 
 function App() {
   const [countryByYearData, setCountryByYearData] = useState([]);
+  const [startYear, setStartYear] = useState(null);
+  const [endYear, setEndYear] = useState(null);
   const [selectedYears, setSelectedYears] = useState([]);
   const [selectedRegions, setSelectedRegions] = useState([]);
   const [countryStories, setCountryStories] = useState([]);
@@ -28,6 +29,12 @@ function App() {
       setCountryStories(data);
     });
   }, []);
+
+  useEffect(() => {
+    console.log('Start Year:', startYear);
+    console.log('End Year:', endYear);
+    console.log('Region:', selectedRegions);
+  }, [startYear, endYear, selectedRegions]);
 
   return (
     <div className="App" style={{ padding: '20px', position: 'relative' }}>
@@ -51,13 +58,21 @@ function App() {
       {/* Graphs and Map section */}
       <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
         <div style={{ flex: 1, border: 'solid 1px red', padding: '10px' }}>
-          
+          <RefugeeQueryAdlib
+            startYear={startYear}
+            endYear={endYear}
+            setStartYear={setStartYear}
+            setEndYear={setEndYear}
+            selectedRegions={selectedRegions}
+            setSelectedRegions={setSelectedRegions}
+          />
         </div>
 
         <div style={{ flex: 2, border: 'solid 1px blue', padding: '10px' }}>
           <MapChart
             data={countryByYearData}
-            selectedYears={selectedYears}
+            startYear={startYear}
+            endYear={endYear}
             selectedRegions={selectedRegions}
           />
         </div>
@@ -67,13 +82,14 @@ function App() {
       <div style={{ flex: 1, border: 'solid 1px purple', marginTop: '2rem', padding: '10px' }}>
         <SankeyChart
           data={countryByYearData}
-          selectedYears={selectedYears}
+          startYear={startYear}
+          endYear={endYear}
           selectedRegions={selectedRegions}
         />
       </div>
 
       <div>
-        <RegionArticleIframe selectedRegion={selectedRegions[0]} />
+        
       </div>
 
     </div>

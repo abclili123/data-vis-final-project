@@ -3,14 +3,14 @@ import * as d3 from 'd3';
 import * as topojson from 'topojson-client';
 import regionColorScale from './region_color_scale';
 
-const MapChart = ({ data, selectedYears, selectedRegions }) => {
+const MapChart = ({ data, startYear, endYear, selectedRegions }) => {
   const ref = useRef();
   const tooltipRef = useRef();
 
   useEffect(() => {
     if (!data || data.length === 0) return;
 
-    const isSingleYear = selectedYears.length === 1;
+    const isSingleYear = (startYear || endYear) && !(startYear && endYear);;
     const width = 500;
     const height = 350;
 
@@ -60,7 +60,7 @@ const MapChart = ({ data, selectedYears, selectedRegions }) => {
         );
       };
 
-      if (selectedYears.length === 0 || selectedRegions.length === 0) {
+      if ((!startYear && !endYear) || selectedRegions.length === 0) {
         svg.attr("viewBox", [0, 0, width - 100, height - 100])
           .style("width", "100%")
           .style("height", "auto");
@@ -138,8 +138,8 @@ const MapChart = ({ data, selectedYears, selectedRegions }) => {
         return +str || 0;
       };
 
-      const yearA = selectedYears[0];
-      const yearB = selectedYears[1];
+      const yearA = startYear;
+      const yearB = endYear;
 
       const rawData = data
         .filter(d => selectedRegions.includes(d.Region))
@@ -320,7 +320,7 @@ const MapChart = ({ data, selectedYears, selectedRegions }) => {
         }, 5000);
       }
     });
-  }, [data, selectedYears, selectedRegions]);
+  }, [data, startYear, endYear, selectedRegions]);
 
   return (
     <div style={{ padding: '20px', position: 'relative' }}>
