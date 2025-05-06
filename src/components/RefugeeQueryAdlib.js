@@ -18,6 +18,7 @@ const RefugeeQueryAdlib = ({
     { value: 'North America', label: 'North America' },
     { value: 'Oceania', label: 'Oceania' },
   ];
+  const yearOptions = years.map((y) => ({ value: y, label: y }));
 
   const CustomMultiValue = (props) => {
     return (
@@ -27,11 +28,9 @@ const RefugeeQueryAdlib = ({
           alignItems: 'center',
           background: '#eef',
           borderRadius: '16px',
-          padding: '4px 10px',
+          padding: '2px 8px',
           fontSize: '16px',
           fontWeight: 600,
-          marginRight: '8px',
-          marginBottom: '4px',
         }}
       >
         <span>{props.data.label}</span>
@@ -50,107 +49,110 @@ const RefugeeQueryAdlib = ({
     );
   };
 
+  const regionSelectStyles = {
+    control: (base) => ({
+      ...base,
+      border: '1px solid #ccc',
+      borderRadius: '6px',
+      background: '#fff',
+      padding: '2px 6px',
+      fontSize: '16px',
+      fontWeight: 600,
+      minHeight: '36px',
+      cursor: 'pointer',
+    }),
+    valueContainer: (base) => ({
+      ...base,
+      display: 'flex',
+      flexWrap: 'wrap',
+      gap: '6px',
+      alignItems: 'center',
+      padding: '4px',
+    }),
+    menu: (base) => ({
+      ...base,
+      fontSize: '16px',
+      zIndex: 20,
+    }),
+    placeholder: (base) => ({
+      ...base,
+      color: '#aaa',
+    }),
+  };
+
+  const yearSelectStyles = {
+    control: (base) => ({
+      ...base,
+      border: '1px solid #ccc',
+      borderRadius: '6px',
+      background: '#fff',
+      padding: '2px 6px',
+      fontSize: '16px',
+      fontWeight: 600,
+      minWidth: '120px',
+      minHeight: '36px',
+      cursor: 'pointer',
+    }),
+    menu: (base) => ({
+      ...base,
+      fontSize: '16px',
+      zIndex: 20,
+    }),
+    placeholder: (base) => ({
+      ...base,
+      color: '#aaa',
+    }),
+  };
+
   return (
-    <div style={{ fontSize: '22px', fontWeight: 400, textAlign: 'center', marginBottom: '40px' }}>
-      <span>Show me data on refugees entering the U.S. from </span>
+    <div
+      style={{
+        fontSize: '20px',
+        fontWeight: 400,
+        textAlign: 'center',
+        marginBottom: '40px',
+        display: 'flex',
+        flexWrap: 'wrap',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: '8px',
+        lineHeight: 1.6,
+      }}
+    >
+      <span>Show me data on refugees entering the U.S. from</span>
 
-      <span style={{ display: 'inline-block', minWidth: '280px', verticalAlign: 'middle' }}>
-        <Select
-          isMulti
-          options={regionOptions}
-          value={regionOptions.filter((opt) => selectedRegions.includes(opt.value))}
-          onChange={(selected) => setSelectedRegions(selected.map((opt) => opt.value))}
-          placeholder="Select region(s)"
-          closeMenuOnSelect={false}
-          components={{
-            MultiValue: CustomMultiValue,
-            // Leave IndicatorsContainer alone so the dropdown arrow shows
-          }}
-          styles={{
-            control: (base) => ({
-              ...base,
-              border: '1px solid #ccc',
-              borderRadius: '6px',
-              background: 'white',
-              padding: '4px 6px',
-              cursor: 'pointer',
-              minHeight: 'auto',
-            }),
-            menu: (base) => ({
-              ...base,
-              fontSize: '16px',
-              zIndex: 20,
-            }),
-            valueContainer: (base) => ({
-              ...base,
-              padding: 0,
-              margin: 0,
-              display: 'flex',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              lineHeight: 1.2,
-            }),
-            placeholder: (base) => ({
-              ...base,
-              color: '#aaa',
-            }),
-          }}
-        />
-      </span>
+      <Select
+        isMulti
+        options={regionOptions}
+        value={regionOptions.filter((opt) => selectedRegions.includes(opt.value))}
+        onChange={(selected) => setSelectedRegions(selected.map((opt) => opt.value))}
+        placeholder="Select region(s)"
+        closeMenuOnSelect={false}
+        components={{ MultiValue: CustomMultiValue }}
+        styles={regionSelectStyles}
+      />
 
-      <span> between </span>
+      <span>between</span>
 
-      <select
-        value={startYear ?? ''}
-        onChange={(e) => setStartYear(Number(e.target.value))}
-        style={{
-          appearance: 'none',
-          WebkitAppearance: 'none',
-          MozAppearance: 'none',
-          background: 'none',
-          border: 'none',
-          borderBottom: '2px solid #ccc',
-          padding: '2px 6px',
-          fontSize: '22px',
-          fontWeight: 600,
-          textAlign: 'center',
-          minWidth: '100px',
-          margin: '0 4px',
-          cursor: 'pointer',
-        }}
-      >
-        <option value="">Start year</option>
-        {years.map((y) => (
-          <option key={y} value={y}>{y}</option>
-        ))}
-      </select>
+      <Select
+        options={yearOptions}
+        value={startYear ? { value: startYear, label: startYear } : null}
+        onChange={(selected) => setStartYear(selected?.value ?? null)}
+        placeholder="Start year"
+        isClearable
+        styles={yearSelectStyles}
+      />
 
-      <span> and </span>
+      <span>and</span>
 
-      <select
-        value={endYear ?? ''}
-        onChange={(e) => setEndYear(Number(e.target.value))}
-        style={{
-          appearance: 'none',
-          WebkitAppearance: 'none',
-          MozAppearance: 'none',
-          background: 'none',
-          border: 'none',
-          borderBottom: '2px solid #ccc',
-          padding: '2px 6px',
-          fontSize: '22px',
-          fontWeight: 600,
-          textAlign: 'center',
-          minWidth: '100px',
-          margin: '0 4px',
-          cursor: 'pointer',
-        }}
-      >
-        <option value="">End year</option>
-        {years.map((y) => (
-          <option key={y} value={y}>{y}</option>
-        ))}
-      </select>
+      <Select
+        options={yearOptions}
+        value={endYear ? { value: endYear, label: endYear } : null}
+        onChange={(selected) => setEndYear(selected?.value ?? null)}
+        placeholder="End year"
+        isClearable
+        styles={yearSelectStyles}
+      />
 
       <span>.</span>
     </div>
