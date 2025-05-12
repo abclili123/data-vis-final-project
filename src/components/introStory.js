@@ -85,7 +85,24 @@ export default function IntroStory() {
             justifyContent: 'center'
           }}
         >
-          <h1>A short paragraph about immigration in America</h1>
+          <div
+          style={{
+            width: '40%'
+          }}
+          >
+          <h1>
+            The United States has a long history with immigration, making
+            diversity a pillar of American identity. For centuries, people from
+            all over the world have traveled here in pursuit of the "American Dream."
+          </h1>
+           <h1>A better life.</h1>
+          <h1>
+            It is America's role to be a safe haven. 
+            Accepting and supporting refugees fleeing from war, persecution, and natural disaster
+            reflects our foundational value of freedom for all. In this time of uncertainty and 
+            hostility towards immigrants, it is important to reflect on this history. 
+          </h1>
+          </div>
         </section>
 
         <section

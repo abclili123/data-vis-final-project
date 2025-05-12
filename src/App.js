@@ -37,13 +37,33 @@ function App() {
   }, [startYear, endYear, selectedRegions]);
 
   return (
-    <div className="App" style={{ padding: '20px', position: 'relative' }}>
+    <div className="App" style={{ padding: '20px', position: 'relative'}}>
       
       <IntroStory />
 
       {/* Render CountryStory components dynamically */}
       <div style={{ marginBottom: '40px' }}>
         <CountryStoryCarousel stories={countryStories} />
+      </div>
+
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          width: '100%',
+          textAlign: 'center',
+          margin: '40px 0'
+        }}
+      >
+        <h1
+        style={{
+          width: '40%'
+        }}
+        >
+          Below, you will find an overview of refugees entering into the United States. 
+          Keep scrolling to explore the data by region and year.
+        </h1>
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -95,7 +115,7 @@ function App() {
 
 
       {/* SankeyChart section */}
-      <div style={{ flex: 1, border: 'solid 1px purple', marginTop: '2rem', padding: '10px' }}>
+      <div style={{ flex: 1, marginTop: '2rem', padding: '10px' }}>
         <SankeyChart
           data={countryByYearData}
           startYear={startYear}
