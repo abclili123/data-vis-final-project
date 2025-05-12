@@ -9,6 +9,8 @@ import MapChart from './components/map';            // your original graphs path
 import { CountryStoryCarousel } from './components/CountryStory';
 import SankeyChart from './components/sankey';  // new SankeyChart from incoming
 import RefugeeQueryAdlib from './components/RefugeeQueryAdlib';
+import CountryLineChart from './components/CountryLineChart';
+
 
 import IntroStory from './components/introStory';
 
@@ -37,85 +39,82 @@ function App() {
   }, [startYear, endYear, selectedRegions]);
 
   return (
-    <div className="App" style={{ padding: '20px', position: 'relative'}}>
-      
-      <IntroStory />
+  <div className="App" style={{ padding: '20px', position: 'relative' }}>
 
-      {/* Render CountryStory components dynamically */}
-      <div style={{ marginBottom: '40px' }}>
-        <CountryStoryCarousel stories={countryStories} />
-      </div>
+    <IntroStory />
 
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          width: '100%',
-          textAlign: 'center',
-          margin: '40px 0'
-        }}
-      >
-        <h1
-        style={{
-          width: '40%'
-        }}
-        >
-          Below, you will find an overview of refugees entering into the United States. 
-          Keep scrolling to explore the data by region and year.
-        </h1>
-      </div>
+    <section style={{ marginBottom: '40px' }}>
+      <CountryStoryCarousel stories={countryStories} />
+    </section>
 
-      <div style={{ display: 'flex', justifyContent: 'center' }}>
-        <Overview
-          data={countryByYearData}
-          selectedYears={selectedYears}
-          setSelectedYears={setSelectedYears}
+    <section
+      style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        width: '100%',
+        textAlign: 'center',
+        margin: '60px 0',
+      }}
+    >
+      <h1 style={{ width: '60%' }}>
+        Below, you will find an overview of refugees entering into the United States. 
+        Keep scrolling to explore the data by region and year.
+      </h1>
+    </section>
+
+    <section style={{ display: 'flex', justifyContent: 'center', marginBottom: '40px' }}>
+      <Overview
+        data={countryByYearData}
+        selectedYears={selectedYears}
+        setSelectedYears={setSelectedYears}
+        setSelectedRegions={setSelectedRegions}
+      />
+    </section>
+
+    <section
+      className="responsive-flex"
+      style={{
+        display: 'flex',
+        alignItems: 'stretch',
+      }}
+    >
+      <div style={{ width: '700px', padding: '10px', alignContent: 'center'}}>
+        <RefugeeQueryAdlib
+          startYear={startYear}
+          endYear={endYear}
+          setStartYear={setStartYear}
+          setEndYear={setEndYear}
+          selectedRegions={selectedRegions}
           setSelectedRegions={setSelectedRegions}
         />
       </div>
 
-      {/* Graphs and Map section */}
-      <div style={{ display: 'flex', gap: '1rem', height: '500px' }}>
-        <div
-          style={{
-            flex: 1,
-            padding: '10px',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            height: '100%',
-          }}
-        >
-          <RefugeeQueryAdlib
-            startYear={startYear}
-            endYear={endYear}
-            setStartYear={setStartYear}
-            setEndYear={setEndYear}
-            selectedRegions={selectedRegions}
-            setSelectedRegions={setSelectedRegions}
-          />
-        </div>
-
-        <div
-          style={{
-            flex: 2,
-            padding: '10px',
-            height: '100%',
-          }}
-        >
-          <MapChart
-            data={countryByYearData}
-            startYear={startYear}
-            endYear={endYear}
-            selectedRegions={selectedRegions}
-          />
-        </div>
+      <div style={{ flex: 1, padding: '10px' }}>
+        <MapChart
+          data={countryByYearData}
+          startYear={startYear}
+          endYear={endYear}
+          selectedRegions={selectedRegions}
+        />
       </div>
+    </section>
 
-
-      {/* SankeyChart section */}
-      <div style={{ flex: 1, marginTop: '2rem', padding: '10px' }}>
+    <section
+      style={{
+        display: 'flex',
+        flexDirection: 'row',
+        gap: '20px',
+        justifyContent: 'center',
+        marginBottom: '60px',
+        padding: '10px',
+      }}
+    >
+      <div
+        style={{
+          flex: 1,
+        }}
+      >
         <SankeyChart
           data={countryByYearData}
           startYear={startYear}
@@ -124,12 +123,20 @@ function App() {
         />
       </div>
 
-      <div>
-        
+      <div
+        style={{
+          flex: 4,
+        }}
+      >
+        <CountryLineChart
+          data={countryByYearData}
+          selectedRegions={selectedRegions}
+        />
       </div>
+    </section>
+  </div>
+);
 
-    </div>
-  );
 }
 
 export default App;
