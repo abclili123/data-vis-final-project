@@ -5,7 +5,6 @@ import regionColorScale from './region_color_scale';
 
 const MapChart = ({ data, startYear, endYear, selectedRegions }) => {
   const ref = useRef();
-  const tooltipRef = useRef();
 
   useEffect(() => {
     if (!data || data.length === 0) return;
@@ -180,7 +179,13 @@ const MapChart = ({ data, startYear, endYear, selectedRegions }) => {
         .domain([0, d3.max(rawData, d => Math.max(d.valueStart, d.valueEnd))])
         .range([0, 30]);
 
-      const tooltip = d3.select(tooltipRef.current);
+      const usBox = {
+        cx: 100,
+        cy: 76,
+        width: 60,
+        height: 30,
+        angle: 15
+      };
 
       const setSimulatedPositions = (data, valueKey, xKey, yKey) => {
         data.forEach(d => {
@@ -192,7 +197,30 @@ const MapChart = ({ data, startYear, endYear, selectedRegions }) => {
         const sim = d3.forceSimulation(data)
           .force("x", d3.forceX(d => d.x).strength(0.5))
           .force("y", d3.forceY(d => d.y).strength(0.5))
-          .force("collide", d3.forceCollide(d => radius(d.value) + 1));
+          .force("collide", d3.forceCollide(d => radius(d.value) + 1))
+          .force("avoidRotatedUSBox", () => {
+            const angle = (usBox.angle * Math.PI) / 180;
+            const cosA = Math.cos(-angle);
+            const sinA = Math.sin(-angle);
+
+            data.forEach(d => {
+              const r = radius(d.value);
+              const dx = d.x - usBox.cx;
+              const dy = d.y - usBox.cy;
+              const rx = dx * cosA - dy * sinA;
+              const ry = dx * sinA + dy * cosA;
+
+              const hw = usBox.width / 2;
+              const hh = usBox.height / 2;
+
+              if (rx + r > -hw && rx - r < hw && ry + r > -hh && ry - r < hh) {
+                const len = Math.sqrt(dx * dx + dy * dy) || 1;
+                const strength = 2;
+                d.vx += (dx / len) * strength;
+                d.vy += (dy / len) * strength;
+              }
+            });
+          });
 
         for (let i = 0; i < 300; i++) sim.tick();
 
@@ -253,6 +281,17 @@ const MapChart = ({ data, startYear, endYear, selectedRegions }) => {
         .attr("stroke-width", 1.5)
         .attr("d", path);
 
+      svg.append("rect")
+        .attr("x", usBox.cx - usBox.width / 2)
+        .attr("y", usBox.cy - usBox.height / 2)
+        .attr("width", usBox.width)
+        .attr("height", usBox.height)
+        .attr("fill", "none")
+        .attr("stroke", "red")
+        .attr("stroke-width", 2)
+        .attr("transform", `rotate(${usBox.angle}, ${usBox.cx}, ${usBox.cy})`);
+
+
       const total = d3.sum(rawData.filter(d => !d.hasDefaultValue), d => d.value);
       updateTotalLabel(yearA, total);
 
@@ -262,18 +301,47 @@ const MapChart = ({ data, startYear, endYear, selectedRegions }) => {
         .append("g")
         .attr("class", "country-group")
         .attr("transform", d => `translate(${d.x},${d.y})`)
-        .on("mouseenter", (event, d) => {
-          tooltip
-            .style("display", "block")
-            .html(`<strong>${d.id}</strong><br/>${d.hasDefaultValue ? 'Unknown' : Math.round(d.value).toLocaleString()}`);
+        .on("mouseover", function (event, d) {
+          const [cx, cy] = d3.pointer(event, svg.node());
+          const valueText = d.hasDefaultValue ? "Unknown" : d3.format(",")(d.value);
+          const tooltipText = `${d.id}\n${valueText}`;
+
+          // Create a tooltip group
+          const tooltipGroup = svg.append("g")
+            .attr("id", "tooltip")
+            .attr("transform", `translate(${cx}, ${cy - radius(d.value) - 10})`);
+
+          // Add text temporarily to measure its size
+          const textEl = tooltipGroup.append("text")
+            .attr("font-size", 6)
+            .attr("font-family", "sans-serif")
+            .attr("fill", "#fff")
+            .attr("text-anchor", "middle")
+            .selectAll("tspan")
+            .data(tooltipText.split("\n"))
+            .enter()
+            .append("tspan")
+            .attr("x", 0)
+            .attr("dy", (d, i) => i === 0 ? 0 : 8)
+            .text(d => d);
+
+          const bbox = tooltipGroup.node().getBBox();
+          tooltipGroup.insert("rect", "text")
+            .attr("x", bbox.x - 6)
+            .attr("y", bbox.y - 4)
+            .attr("width", bbox.width + 12)
+            .attr("height", bbox.height + 8)
+            .attr("rx", 4)
+            .attr("ry", 4)
+            .attr("fill", "rgba(0, 0, 0, 0.8)");
         })
-        .on("mousemove", (event) => {
-          tooltip
-            .style("left", (event.pageX) + "px")
-            .style("top", (event.pageY) + "px");
+        .on("mousemove", function (event) {
+          const [x, y] = d3.pointer(event, svg.node());
+          d3.select("#tooltip")
+            .attr("transform", `translate(${x}, ${y - 20})`); // Offset above the cursor
         })
-        .on("mouseleave", () => {
-          tooltip.style("display", "none");
+        .on("mouseout", function () {
+          svg.select("#tooltip").remove();
         });
 
       const circles = groups.append("circle")
@@ -326,7 +394,6 @@ const MapChart = ({ data, startYear, endYear, selectedRegions }) => {
     <div style={{ padding: '20px', position: 'relative' }}>
       <svg ref={ref}></svg>
       <div
-        ref={tooltipRef}
         style={{
           position: 'absolute',
           pointerEvents: 'none',
