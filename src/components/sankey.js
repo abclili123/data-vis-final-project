@@ -24,7 +24,7 @@ const SankeyChart = ({ data, startYear, endYear, selectedRegions }) => {
 
     const filtered = data.filter((d) => selectedRegions.includes(d.Region));
 
-    const width = 875;
+    const width = 600;
     const height = 600;
     const margin = { top: 20, right: 250, bottom: 80, left: 250 };
     const innerWidth = 300;
