@@ -12,9 +12,6 @@ const MapChart = ({ data, startYear, endYear, selectedRegions }) => {
     const isSingleYear = (startYear || endYear) && !(startYear && endYear);
     const width = 500;
     const height = 350;
-    console.log(startYear)
-    console.log(endYear)
-    console.log(isSingleYear)
 
     d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json").then(world => {
       const svg = d3.select(ref.current);
@@ -24,77 +21,19 @@ const MapChart = ({ data, startYear, endYear, selectedRegions }) => {
       const projection = d3.geoNaturalEarth1().fitSize([width - 100, height - 100], { type: "Sphere" });
       const path = d3.geoPath(projection);
 
-      const labelGroup = svg.append("g")
-        .attr("transform", `translate(${(width - 100) / 2}, 10)`);
-
-      const totalText = labelGroup.append("text")
-        .attr("text-anchor", "middle")
-        .attr("dominant-baseline", "hanging")
-        .attr("font-family", "sans-serif")
-        .attr("font-size", 10)
-        .attr("fill", "black");
-
-      const updateTotalLabel = (year, total) => {
-        const fullLine = `Year: ${year} | Total: ${Math.round(total).toLocaleString()}`;
-
-        const updateText = totalText.selectAll("tspan").data([fullLine]);
-
-        updateText.join(
-          enter => enter.append("tspan")
-            .attr("x", 0)
-            .style("opacity", 0)
-            .text(d => d)
-            .transition()
-            .duration(500)
-            .style("opacity", 1),
-          update => update
-            .transition()
-            .duration(500)
-            .style("opacity", 0)
-            .on("end", function () {
-              d3.select(this)
-                .text(fullLine)
-                .transition()
-                .duration(500)
-                .style("opacity", 1);
-            }),
-          exit => exit.transition().duration(300).style("opacity", 0).remove()
-        );
-      };
-
       if ((!startYear && !endYear) || selectedRegions.length === 0) {
         svg.attr("viewBox", [0, 0, width - 100, height - 100])
           .style("width", "100%")
           .style("height", "auto");
 
-        svg.append("path")
-          .datum({ type: "Sphere" })
-          .attr("d", path)
-          .style("fill", "#9ACBE3");
-
-        svg.append("path")
-          .datum(d3.geoGraticule10())
-          .attr("d", path)
-          .style("fill", "none")
-          .style("stroke", "white")
-          .style("stroke-width", .8)
-          .style("stroke-opacity", .5)
-          .style("stroke-dasharray", 2);
-
-        svg.append("path")
-          .datum(countriesFeature)
-          .attr("fill", "white")
-          .style("fill-opacity", .5)
-          .attr("d", path);
+        svg.append("path").datum({ type: "Sphere" }).attr("d", path).style("fill", "#9ACBE3");
+        svg.append("path").datum(d3.geoGraticule10()).attr("d", path)
+          .style("fill", "none").style("stroke", "white").style("stroke-width", .8)
+          .style("stroke-opacity", .5).style("stroke-dasharray", 2);
+        svg.append("path").datum(countriesFeature).attr("fill", "white").style("fill-opacity", .5).attr("d", path);
 
         const usFeature = countriesFeature.features.find(f => f.properties.name === "United States of America");
-        svg.append("path")
-          .datum(usFeature)
-          .attr("fill", "none")
-          .attr("stroke", "black")
-          .attr("stroke-width", 1.5)
-          .attr("d", path);
-
+        svg.append("path").datum(usFeature).attr("fill", "none").attr("stroke", "black").attr("stroke-width", 1.5).attr("d", path);
         return;
       }
 
@@ -121,8 +60,6 @@ const MapChart = ({ data, startYear, endYear, selectedRegions }) => {
         "South Sudan": "S. Sudan"
       };
 
-      const missingCentroids = [];
-
       const parseValue = (str, d) => {
         if (typeof str === 'string') {
           if (str === 'D') {
@@ -131,8 +68,7 @@ const MapChart = ({ data, startYear, endYear, selectedRegions }) => {
           }
           const cleaned = str.replace(/,/g, '');
           const num = +cleaned;
-          if (isNaN(num)) return 0;
-          return num;
+          return isNaN(num) ? 0 : num;
         }
         return +str || 0;
       };
@@ -154,7 +90,6 @@ const MapChart = ({ data, startYear, endYear, selectedRegions }) => {
             yearValues[year] = parseValue(d[year], local);
           }
         }
-        if (!coords) missingCentroids.push({ Country: d.Country, Region: d.Region });
         return {
           id: normalizedName,
           region: d.Region,
@@ -179,6 +114,7 @@ const MapChart = ({ data, startYear, endYear, selectedRegions }) => {
           d.x = d.originalX;
           d.y = d.originalY;
         });
+
         const sim = d3.forceSimulation(data)
           .force("x", d3.forceX(d => d.x).strength(0.5))
           .force("y", d3.forceY(d => d.y).strength(0.5))
@@ -190,14 +126,12 @@ const MapChart = ({ data, startYear, endYear, selectedRegions }) => {
             const hw = usBox.width / 2;
             const hh = usBox.height / 2;
             const strength = 2;
-
             data.forEach(d => {
               const r = radius(d.value);
               const dx = d.x - usBox.cx;
               const dy = d.y - usBox.cy;
               const rx = dx * cosA - dy * sinA;
               const ry = dx * sinA + dy * cosA;
-
               if (rx + r > -hw && rx - r < hw && ry + r > -hh && ry - r < hh) {
                 const len = Math.sqrt(dx * dx + dy * dy) || 1;
                 d.vx += (dx / len) * strength;
@@ -223,7 +157,7 @@ const MapChart = ({ data, startYear, endYear, selectedRegions }) => {
       } else {
         allYears = d3.range(yearA, yearB + 1);
       }
-      
+
       allYears.forEach(year => {
         setSimulatedPositions(rawData, year, `xSim${year}`, `ySim${year}`);
       });
@@ -235,41 +169,18 @@ const MapChart = ({ data, startYear, endYear, selectedRegions }) => {
         d.y = d[`ySim${firstYear}`];
       });
 
-
       svg.attr("viewBox", [0, 0, width - 100, height - 100])
         .style("width", "100%")
         .style("height", "auto");
 
-      svg.append("path")
-        .datum({ type: "Sphere" })
-        .attr("d", path)
-        .style("fill", "#9ACBE3");
-
-      svg.append("path")
-        .datum(d3.geoGraticule10())
-        .attr("d", path)
-        .style("fill", "none")
-        .style("stroke", "white")
-        .style("stroke-width", .8)
-        .style("stroke-opacity", .5)
-        .style("stroke-dasharray", 2);
-
-      svg.append("path")
-        .datum(countriesFeature)
-        .attr("fill", "white")
-        .style("fill-opacity", .5)
-        .attr("d", path);
+      svg.append("path").datum({ type: "Sphere" }).attr("d", path).style("fill", "#9ACBE3");
+      svg.append("path").datum(d3.geoGraticule10()).attr("d", path)
+        .style("fill", "none").style("stroke", "white").style("stroke-width", .8)
+        .style("stroke-opacity", .5).style("stroke-dasharray", 2);
+      svg.append("path").datum(countriesFeature).attr("fill", "white").style("fill-opacity", .5).attr("d", path);
 
       const usFeature = countriesFeature.features.find(f => f.properties.name === "United States of America");
-      svg.append("path")
-        .datum(usFeature)
-        .attr("fill", "none")
-        .attr("stroke", "black")
-        .attr("stroke-width", 1.5)
-        .attr("d", path);
-
-      const total = d3.sum(rawData.filter(d => !d.hasDefaultValue), d => d.value);
-      updateTotalLabel(firstYear, total);
+      svg.append("path").datum(usFeature).attr("fill", "none").attr("stroke", "black").attr("stroke-width", 1.5).attr("d", path);
 
       const groups = svg.selectAll("g.country-group")
         .data(rawData)
@@ -278,45 +189,58 @@ const MapChart = ({ data, startYear, endYear, selectedRegions }) => {
         .attr("class", "country-group")
         .attr("transform", d => `translate(${d.x},${d.y})`)
         .on("mouseover", function (event, d) {
-          const [cx, cy] = d3.pointer(event, svg.node());
-          const valueText = d.hasDefaultValue ? "Unknown" : d3.format(",")(d.value);
-          const tooltipText = `${d.id}\n${valueText}`;
+      const [cx, cy] = d3.pointer(event, svg.node());
+      const valueText = d.hasDefaultValue ? "Unknown" : d3.format(",")(d.value);
+      const tooltipText = `${d.id}\n${valueText}`;
 
-          const tooltipGroup = svg.append("g")
-            .attr("id", "tooltip")
-            .attr("transform", `translate(${cx}, ${cy - radius(d.value) - 10})`);
+      const tooltipGroup = svg.append("g")
+        .attr("id", "tooltip")
+        .attr("transform", `translate(${cx}, ${cy - radius(d.value) - 10})`);
 
-          const textEl = tooltipGroup.append("text")
-            .attr("font-size", 6)
-            .attr("font-family", "sans-serif")
-            .attr("fill", "#fff")
-            .attr("text-anchor", "middle")
-            .selectAll("tspan")
-            .data(tooltipText.split("\n"))
-            .enter()
-            .append("tspan")
-            .attr("x", 0)
-            .attr("dy", (d, i) => i === 0 ? 0 : 8)
-            .text(d => d);
+      tooltipGroup.append("text")
+        .attr("font-size", 6)
+        .attr("font-family", "sans-serif")
+        .attr("fill", "#fff")
+        .attr("text-anchor", "middle")
+        .selectAll("tspan")
+        .data(tooltipText.split("\n"))
+        .enter()
+        .append("tspan")
+        .attr("x", 0)
+        .attr("dy", (d, i) => i === 0 ? 0 : 8)
+        .text(d => d);
 
-          const bbox = tooltipGroup.node().getBBox();
-          tooltipGroup.insert("rect", "text")
-            .attr("x", bbox.x - 6)
-            .attr("y", bbox.y - 4)
-            .attr("width", bbox.width + 12)
-            .attr("height", bbox.height + 8)
-            .attr("rx", 4)
-            .attr("ry", 4)
-            .attr("fill", "rgba(0, 0, 0, 0.8)");
-        })
-        .on("mousemove", function (event) {
-          const [x, y] = d3.pointer(event, svg.node());
-          d3.select("#tooltip")
-            .attr("transform", `translate(${x}, ${y - 20})`);
-        })
-        .on("mouseout", function () {
-          svg.select("#tooltip").remove();
-        });
+      const bbox = tooltipGroup.node().getBBox();
+        tooltipGroup.insert("rect", "text")
+          .attr("x", bbox.x - 6)
+          .attr("y", bbox.y - 4)
+          .attr("width", bbox.width + 12)
+          .attr("height", bbox.height + 8)
+          .attr("rx", 4)
+          .attr("ry", 4)
+          .attr("fill", "rgba(0, 0, 0, 0.8)");
+      })
+      .on("mousemove", function (event) {
+        const [x, y] = d3.pointer(event, svg.node());
+        d3.select("#tooltip")
+          .attr("transform", `translate(${x}, ${y - 20})`);
+      })
+      .on("mouseout", function () {
+        svg.select("#tooltip").remove();
+      });
+
+      const tooltip = d3.select("body")
+        .append("div")
+        .attr("class", "map-tooltip")
+        .style("position", "absolute")
+        .style("padding", "6px 10px")
+        .style("background", "#fff")
+        .style("border", "1px solid #ccc")
+        .style("border-radius", "4px")
+        .style("pointer-events", "none")
+        .style("box-shadow", "0 1px 4px rgba(0,0,0,0.2)")
+        .style("font-size", "13px")
+        .style("opacity", 0);
 
       const circles = groups.append("circle")
         .attr("r", d => radius(d.value))
@@ -335,26 +259,96 @@ const MapChart = ({ data, startYear, endYear, selectedRegions }) => {
         .attr("fill", "white")
         .style("font-size", d => `${radius(d.value) * 0.8}px`);
 
-      if (!isSingleYear) {
-        let yearIndex = 0;
-        d3.interval(() => {
-          const currentYear = allYears[yearIndex];
-          yearIndex = (yearIndex + 1) % allYears.length;
+      const timelineHeight = height - 30;
+    const timelineGroup = svg.append("g").attr("class", "timeline");
 
-          rawData.forEach(d => {
-            d.value = d.yearValues[currentYear];
-            d.x = d[`xSim${currentYear}`];
-            d.y = d[`ySim${currentYear}`];
-          });
+    const yearScale = d3.scalePoint()
+      .domain(allYears)
+      .range([40, width - 140])
+      .padding(0.5);
 
-          const currentTotal = d3.sum(rawData.filter(d => !d.hasDefaultValue), d => d.value);
-          updateTotalLabel(currentYear, currentTotal);
+    const getBarCenter = d => yearScale(d);
 
-          circles.transition().duration(1000).attr("r", d => radius(d.value));
-          groups.transition().duration(1000).attr("transform", d => `translate(${d.x},${d.y})`);
-          groups.select("text").transition().duration(1000).style("font-size", d => `${radius(d.value) * 0.8}px`);
-        }, 5000);
-      }
+    timelineGroup.append("line")
+      .attr("x1", getBarCenter(allYears[0]))
+      .attr("x2", getBarCenter(allYears[allYears.length - 1]))
+      .attr("y1", 4)
+      .attr("y2", 4)
+      .attr("stroke", "#ddd")
+      .attr("stroke-width", 4);
+
+    const yearDots = timelineGroup.selectAll("circle.year-dot")
+      .data(allYears)
+      .enter()
+      .append("circle")
+      .attr("class", "year-dot")
+      .attr("cx", d => getBarCenter(d))
+      .attr("cy", 4)
+      .attr("r", 3)
+      .attr("fill", d => d === firstYear ? '#4CAF50' : '#fff')
+      .attr("stroke", "#4CAF50")
+      .attr("stroke-width", 2);
+
+    const yearLabels = timelineGroup.selectAll(".year-label")
+      .data(allYears)
+      .enter()
+      .append("text")
+      .attr("class", d => `year-label year-${d}`)
+      .attr("x", d => yearScale(d))
+      .attr("y", 15)
+      .attr("text-anchor", "middle")
+      .attr("font-size", 5)
+      .attr("fill", d => d === firstYear ? "black" : "#999")
+      .attr("font-weight", d => d === firstYear ? "bold" : "normal")
+      .text(d => d);
+
+    const totalGroup = svg.append("g")
+      .attr("class", "total-label")
+      .attr("transform", `translate(${(width-100) / 2}, ${240})`);
+
+    const totalText = totalGroup.append("text")
+      .attr("text-anchor", "middle")
+      .attr("font-size", 8)
+      .attr("font-family", "sans-serif")
+      .attr("fill", "#333")
+      .text(""); // placeholder, will be updated
+
+    const formatTotal = d3.format(",");
+    const updateTotal = (year) => {
+      const total = d3.sum(rawData.filter(d => !d.hasDefaultValue), d => d.value);
+      totalText.text(`Total: ${formatTotal(total)}`);
+    };
+
+    updateTotal(firstYear);
+
+
+    // Animation loop only if more than one year
+    if (allYears.length > 1) {
+      let yearIndex = 0;
+      d3.interval(() => {
+        const currentYear = allYears[yearIndex];
+        updateTotal(currentYear);
+        yearIndex = (yearIndex + 1) % allYears.length;
+
+        rawData.forEach(d => {
+          d.value = d.yearValues[currentYear];
+          d.x = d[`xSim${currentYear}`];
+          d.y = d[`ySim${currentYear}`];
+        });
+
+        circles.transition().duration(1000).attr("r", d => radius(d.value));
+        groups.transition().duration(1000).attr("transform", d => `translate(${d.x},${d.y})`);
+        groups.select("text").transition().duration(1000).style("font-size", d => `${radius(d.value) * 0.8}px`);
+
+        yearDots.transition().duration(800)
+          .attr("fill", d => d === currentYear ? '#4CAF50' : '#fff');
+
+        yearLabels.transition().duration(800)
+          .attr("fill", d => d === currentYear ? "black" : "#999")
+          .attr("font-weight", d => d === currentYear ? "bold" : "normal");
+
+      }, 5000);
+    }
     });
   }, [data, startYear, endYear, selectedRegions]);
 
