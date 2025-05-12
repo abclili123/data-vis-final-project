@@ -3,15 +3,13 @@ import * as d3 from 'd3';
 import * as topojson from 'topojson-client';
 import regionColorScale from './region_color_scale';
 
-
-const MapChart = ({ data, selectedYears, selectedRegions }) => {
+const MapChart = ({ data, startYear, endYear, selectedRegions }) => {
   const ref = useRef();
-  const tooltipRef = useRef();
 
-useEffect(() => {
+  useEffect(() => {
     if (!data || data.length === 0) return;
 
-    const isSingleYear = selectedYears.length === 1
+    const isSingleYear = (startYear || endYear) && !(startYear && endYear);
     const width = 500;
     const height = 350;
 
@@ -23,39 +21,19 @@ useEffect(() => {
       const projection = d3.geoNaturalEarth1().fitSize([width - 100, height - 100], { type: "Sphere" });
       const path = d3.geoPath(projection);
 
-      if (selectedYears.length === 0 || selectedRegions.length===0) {
+      if ((!startYear && !endYear) || selectedRegions.length === 0) {
         svg.attr("viewBox", [0, 0, width - 100, height - 100])
-        .style("width", "100%")
-        .style("height", "auto");
+          .style("width", "100%")
+          .style("height", "auto");
 
-        svg.append("path")
-          .datum({ type: "Sphere" })
-          .attr("d", path)
-          .style("fill", "#9ACBE3");
-
-        svg.append("path")
-          .datum(d3.geoGraticule10())
-          .attr("d", path)
-          .style("fill", "none")
-          .style("stroke", "white")
-          .style("stroke-width", .8)
-          .style("stroke-opacity", .5)
-          .style("stroke-dasharray", 2);
-
-        svg.append("path")
-          .datum(countriesFeature)
-          .attr("fill", "white")
-          .style("fill-opacity", .5)
-          .attr("d", path);
+        svg.append("path").datum({ type: "Sphere" }).attr("d", path).style("fill", "#9ACBE3");
+        svg.append("path").datum(d3.geoGraticule10()).attr("d", path)
+          .style("fill", "none").style("stroke", "white").style("stroke-width", .8)
+          .style("stroke-opacity", .5).style("stroke-dasharray", 2);
+        svg.append("path").datum(countriesFeature).attr("fill", "white").style("fill-opacity", .5).attr("d", path);
 
         const usFeature = countriesFeature.features.find(f => f.properties.name === "United States of America");
-        svg.append("path")
-          .datum(usFeature)
-          .attr("fill", "none")
-          .attr("stroke", "black")
-          .attr("stroke-width", 1.5)
-          .attr("d", path);
-
+        svg.append("path").datum(usFeature).attr("fill", "none").attr("stroke", "black").attr("stroke-width", 1.5).attr("d", path);
         return;
       }
 
@@ -82,8 +60,6 @@ useEffect(() => {
         "South Sudan": "S. Sudan"
       };
 
-      const missingCentroids = [];
-
       const parseValue = (str, d) => {
         if (typeof str === 'string') {
           if (str === 'D') {
@@ -92,70 +68,49 @@ useEffect(() => {
           }
           const cleaned = str.replace(/,/g, '');
           const num = +cleaned;
-          if (isNaN(num)) {
-            console.warn('Invalid numeric value:', str);
-            return 0;
-          }
-          return num;
+          return isNaN(num) ? 0 : num;
         }
         return +str || 0;
       };
 
-      const yearA = selectedYears[0];
-      const yearB = selectedYears[1];
+      const yearA = startYear;
+      const yearB = endYear;
 
-      const rawData = data
-      .filter(d => selectedRegions.includes(d.Region))
-      .map(d => {
+      const rawData = data.filter(d => selectedRegions.includes(d.Region)).map(d => {
         const normalizedName = countryNameMap[d.Country] || d.Country;
         const coords = countryCentroids.get(normalizedName);
         const local = { hasDefaultValue: false };
-        const valueStart = parseValue(d[yearA], local);
-        const valueEnd = yearB ? parseValue(d[yearB], local) : valueStart;
-
-        if (!coords) {
-          missingCentroids.push({
-            Country: d.Country,
-            Region: d.Region,
-            Value: valueStart
-          });
+        const yearValues = {};
+        if (yearA != null && yearB == null) {
+          yearValues[yearA] = parseValue(d[yearA], local);
+        } else if (yearB != null && yearA == null) {
+          yearValues[yearB] = parseValue(d[yearB], local);
+        } else {
+          for (let year = yearA; year <= yearB; year++) {
+            yearValues[year] = parseValue(d[year], local);
+          }
         }
-
         return {
           id: normalizedName,
           region: d.Region,
-          valueStart,
-          valueEnd,
-          value: valueStart,
+          yearValues,
           hasDefaultValue: local.hasDefaultValue,
           x: coords ? coords[0] : null,
           y: coords ? coords[1] : null,
           originalX: coords ? coords[0] : null,
-          originalY: coords ? coords[1] : null,
-          xSimStart: null,
-          ySimStart: null,
-          xSimEnd: null,
-          ySimEnd: null
+          originalY: coords ? coords[1] : null
         };
       }).filter(d => d.x !== null && d.y !== null);
 
       const radius = d3.scaleSqrt()
-        .domain([0, d3.max(rawData, d => Math.max(d.valueStart, d.valueEnd))])
+        .domain([0, d3.max(rawData, d => d3.max(Object.values(d.yearValues)))])
         .range([0, 30]);
 
-      const tooltip = d3.select(tooltipRef.current);
+      const usBox = { cx: 100, cy: 76, width: 60, height: 30, angle: 15 };
 
-      const usBox = {
-        cx: 100,
-        cy: 76,
-        width: 60,
-        height: 30,
-        angle: 15
-      };
-
-      const setSimulatedPositions = (data, valueKey, xKey, yKey) => {
+      const setSimulatedPositions = (data, currentYear, xKey, yKey) => {
         data.forEach(d => {
-          d.value = d[valueKey];
+          d.value = d.yearValues[currentYear];
           d.x = d.originalX;
           d.y = d.originalY;
         });
@@ -168,20 +123,17 @@ useEffect(() => {
             const angle = (usBox.angle * Math.PI) / 180;
             const cosA = Math.cos(-angle);
             const sinA = Math.sin(-angle);
-
+            const hw = usBox.width / 2;
+            const hh = usBox.height / 2;
+            const strength = 2;
             data.forEach(d => {
               const r = radius(d.value);
               const dx = d.x - usBox.cx;
               const dy = d.y - usBox.cy;
               const rx = dx * cosA - dy * sinA;
               const ry = dx * sinA + dy * cosA;
-
-              const hw = usBox.width / 2;
-              const hh = usBox.height / 2;
-
               if (rx + r > -hw && rx - r < hw && ry + r > -hh && ry - r < hh) {
                 const len = Math.sqrt(dx * dx + dy * dy) || 1;
-                const strength = 2;
                 d.vx += (dx / len) * strength;
                 d.vy += (dy / len) * strength;
               }
@@ -189,118 +141,46 @@ useEffect(() => {
           });
 
         for (let i = 0; i < 300; i++) sim.tick();
+        sim.stop();
 
         data.forEach(d => {
           d[xKey] = d.x;
           d[yKey] = d.y;
         });
-
-        sim.stop();
       };
 
-      if (isSingleYear) {
-        setSimulatedPositions(rawData, 'valueStart', 'xSimStart', 'ySimStart');
-
-        rawData.forEach(d => {
-          d.x = d.xSimStart;
-          d.y = d.ySimStart;
-          d.value = d.valueStart;
-        });
+      let allYears;
+      if (yearA != null && yearB == null) {
+        allYears = [yearA];
+      } else if (yearB != null && yearA == null) {
+        allYears = [yearB];
       } else {
-        setSimulatedPositions(rawData, 'valueStart', 'xSimStart', 'ySimStart');
-        setSimulatedPositions(rawData, 'valueEnd', 'xSimEnd', 'ySimEnd');
-
-        rawData.forEach(d => {
-          d.x = d.xSimStart;
-          d.y = d.ySimStart;
-          d.value = d.valueStart;
-        });
+        allYears = d3.range(yearA, yearB + 1);
       }
+
+      allYears.forEach(year => {
+        setSimulatedPositions(rawData, year, `xSim${year}`, `ySim${year}`);
+      });
+
+      const firstYear = allYears[0];
+      rawData.forEach(d => {
+        d.value = d.yearValues[firstYear];
+        d.x = d[`xSim${firstYear}`];
+        d.y = d[`ySim${firstYear}`];
+      });
 
       svg.attr("viewBox", [0, 0, width - 100, height - 100])
         .style("width", "100%")
         .style("height", "auto");
 
-      svg.append("path")
-        .datum({ type: "Sphere" })
-        .attr("d", path)
-        .style("fill", "#9ACBE3");
-
-      svg.append("path")
-        .datum(d3.geoGraticule10())
-        .attr("d", path)
-        .style("fill", "none")
-        .style("stroke", "white")
-        .style("stroke-width", .8)
-        .style("stroke-opacity", .5)
-        .style("stroke-dasharray", 2);
-
-      svg.append("path")
-        .datum(countriesFeature)
-        .attr("fill", "white")
-        .style("fill-opacity", .5)
-        .attr("d", path);
+      svg.append("path").datum({ type: "Sphere" }).attr("d", path).style("fill", "#9ACBE3");
+      svg.append("path").datum(d3.geoGraticule10()).attr("d", path)
+        .style("fill", "none").style("stroke", "white").style("stroke-width", .8)
+        .style("stroke-opacity", .5).style("stroke-dasharray", 2);
+      svg.append("path").datum(countriesFeature).attr("fill", "white").style("fill-opacity", .5).attr("d", path);
 
       const usFeature = countriesFeature.features.find(f => f.properties.name === "United States of America");
-      svg.append("path")
-        .datum(usFeature)
-        .attr("fill", "none")
-        .attr("stroke", "black")
-        .attr("stroke-width", 1.5)
-        .attr("d", path);
-
-      const labelGroup = svg.append("g")
-        .attr("transform", `translate(${usBox.cx},${usBox.cy-5})`);
-
-        const textBackground = labelGroup.append("rect")
-        .attr("x", -33)
-        .attr("y", -10)
-        .attr("width", 60)
-        .attr("height", 26)
-        .attr("fill", "white")
-        .attr("opacity", 0.5)
-        .attr("rx", 4);
-      
-      const totalText = labelGroup.append("text")
-        .attr("text-anchor", "middle")
-        .attr("dominant-baseline", "middle")
-        .attr("font-family", "sans-serif")
-        .attr("font-size", 8)
-        .attr("fill", "black");      
-
-        const updateTotalLabel = (year, total) => {
-          const yearLine = `Year: ${year}`;
-          const totalLine = `Total: ${Math.round(total).toLocaleString()}`;
-        
-          const updateTspans = totalText.selectAll("tspan").data([yearLine, totalLine]);
-        
-          updateTspans.join(
-            enter => enter.append("tspan")
-              .attr("x", 0)
-              .attr("dy", (d, i) => i === 0 ? "0em" : "1.2em")
-              .style("opacity", 0)
-              .text(d => d)
-              .transition()
-              .duration(500)
-              .style("opacity", 1),
-            update => update
-              .transition()
-              .duration(500)
-              .style("opacity", 0)
-              .on("end", function(_, i) {
-                d3.select(this)
-                  .text(i === 0 ? yearLine : totalLine)
-                  .transition()
-                  .duration(500)
-                  .style("opacity", 1);
-              }),
-            exit => exit.transition().duration(300).style("opacity", 0).remove()
-          );
-        };
-        
-
-      const total = d3.sum(rawData.filter(d => !d.hasDefaultValue), d => d.value);
-      updateTotalLabel(yearA, total);
+      svg.append("path").datum(usFeature).attr("fill", "none").attr("stroke", "black").attr("stroke-width", 1.5).attr("d", path);
 
       const groups = svg.selectAll("g.country-group")
         .data(rawData)
@@ -308,19 +188,59 @@ useEffect(() => {
         .append("g")
         .attr("class", "country-group")
         .attr("transform", d => `translate(${d.x},${d.y})`)
-        .on("mouseenter", (event, d) => {
-          tooltip
-            .style("display", "block")
-            .html(`<strong>${d.id}</strong><br/>${d.hasDefaultValue ? 'Unknown' : Math.round(d.value).toLocaleString()}`);
-        })
-        .on("mousemove", (event) => {
-          tooltip
-            .style("left", (event.pageX) + "px")
-            .style("top", (event.pageY) + "px");
-        })
-        .on("mouseleave", () => {
-          tooltip.style("display", "none");
-        });
+        .on("mouseover", function (event, d) {
+      const [cx, cy] = d3.pointer(event, svg.node());
+      const valueText = d.hasDefaultValue ? "Unknown" : d3.format(",")(d.value);
+      const tooltipText = `${d.id}\n${valueText}`;
+
+      const tooltipGroup = svg.append("g")
+        .attr("id", "tooltip")
+        .attr("transform", `translate(${cx}, ${cy - radius(d.value) - 10})`);
+
+      tooltipGroup.append("text")
+        .attr("font-size", 6)
+        .attr("font-family", "sans-serif")
+        .attr("fill", "#fff")
+        .attr("text-anchor", "middle")
+        .selectAll("tspan")
+        .data(tooltipText.split("\n"))
+        .enter()
+        .append("tspan")
+        .attr("x", 0)
+        .attr("dy", (d, i) => i === 0 ? 0 : 8)
+        .text(d => d);
+
+      const bbox = tooltipGroup.node().getBBox();
+        tooltipGroup.insert("rect", "text")
+          .attr("x", bbox.x - 6)
+          .attr("y", bbox.y - 4)
+          .attr("width", bbox.width + 12)
+          .attr("height", bbox.height + 8)
+          .attr("rx", 4)
+          .attr("ry", 4)
+          .attr("fill", "rgba(0, 0, 0, 0.8)");
+      })
+      .on("mousemove", function (event) {
+        const [x, y] = d3.pointer(event, svg.node());
+        d3.select("#tooltip")
+          .attr("transform", `translate(${x}, ${y - 20})`);
+      })
+      .on("mouseout", function () {
+        svg.select("#tooltip").remove();
+      });
+
+      const tooltip = d3.select("body")
+        .append("div")
+        .attr("class", "map-tooltip")
+        .style("position", "absolute")
+        .style("padding", "6px 10px")
+        .style("background", "#fff")
+        .style("border", "1px solid #ccc")
+        .style("border-radius", "4px")
+        .style("pointer-events", "none")
+        .style("box-shadow", "0 1px 4px rgba(0,0,0,0.2)")
+        .style("font-size", "13px")
+        .style("opacity", 0);
 
       const circles = groups.append("circle")
         .attr("r", d => radius(d.value))
@@ -339,51 +259,102 @@ useEffect(() => {
         .attr("fill", "white")
         .style("font-size", d => `${radius(d.value) * 0.8}px`);
 
-      if (!isSingleYear) {
-        d3.interval(() => {
-          rawData.forEach(d => {
-            const isStart = d.value === d.valueStart;
-            d.value = isStart ? d.valueEnd : d.valueStart;
-            d.x = isStart ? d.xSimEnd : d.xSimStart;
-            d.y = isStart ? d.ySimEnd : d.ySimStart;
-            const currentYear = isStart ? yearB : yearA;
-            const currentTotal = d3.sum(rawData.filter(d => !d.hasDefaultValue), d => d.value);
-            updateTotalLabel(currentYear, currentTotal);
-          });
+      const timelineHeight = height - 30;
+    const timelineGroup = svg.append("g").attr("class", "timeline");
 
-          circles.transition()
-            .duration(1000)
-            .attr("r", d => radius(d.value));
+    const yearScale = d3.scalePoint()
+      .domain(allYears)
+      .range([40, width - 140])
+      .padding(0.5);
 
-          groups.transition()
-            .duration(1000)
-            .attr("transform", d => `translate(${d.x},${d.y})`);
+    const getBarCenter = d => yearScale(d);
 
-          groups.select("text")
-            .transition()
-            .duration(1000)
-            .style("font-size", d => `${radius(d.value) * 0.8}px`);
-        }, 5000);
-      }
+    timelineGroup.append("line")
+      .attr("x1", getBarCenter(allYears[0]))
+      .attr("x2", getBarCenter(allYears[allYears.length - 1]))
+      .attr("y1", 4)
+      .attr("y2", 4)
+      .attr("stroke", "#ddd")
+      .attr("stroke-width", 4);
+
+    const yearDots = timelineGroup.selectAll("circle.year-dot")
+      .data(allYears)
+      .enter()
+      .append("circle")
+      .attr("class", "year-dot")
+      .attr("cx", d => getBarCenter(d))
+      .attr("cy", 4)
+      .attr("r", 3)
+      .attr("fill", d => d === firstYear ? '#4CAF50' : '#fff')
+      .attr("stroke", "#4CAF50")
+      .attr("stroke-width", 2);
+
+    const yearLabels = timelineGroup.selectAll(".year-label")
+      .data(allYears)
+      .enter()
+      .append("text")
+      .attr("class", d => `year-label year-${d}`)
+      .attr("x", d => yearScale(d))
+      .attr("y", 15)
+      .attr("text-anchor", "middle")
+      .attr("font-size", 5)
+      .attr("fill", d => d === firstYear ? "black" : "#999")
+      .attr("font-weight", d => d === firstYear ? "bold" : "normal")
+      .text(d => d);
+
+    const totalGroup = svg.append("g")
+      .attr("class", "total-label")
+      .attr("transform", `translate(${(width-100) / 2}, ${240})`);
+
+    const totalText = totalGroup.append("text")
+      .attr("text-anchor", "middle")
+      .attr("font-size", 8)
+      .attr("font-family", "sans-serif")
+      .attr("fill", "#333")
+      .text(""); // placeholder, will be updated
+
+    const formatTotal = d3.format(",");
+    const updateTotal = (year) => {
+      const total = d3.sum(rawData.filter(d => !d.hasDefaultValue), d => d.value);
+      totalText.text(`Total: ${formatTotal(total)}`);
+    };
+
+    updateTotal(firstYear);
+
+
+    // Animation loop only if more than one year
+    if (allYears.length > 1) {
+      let yearIndex = 0;
+      d3.interval(() => {
+        const currentYear = allYears[yearIndex];
+        updateTotal(currentYear);
+        yearIndex = (yearIndex + 1) % allYears.length;
+
+        rawData.forEach(d => {
+          d.value = d.yearValues[currentYear];
+          d.x = d[`xSim${currentYear}`];
+          d.y = d[`ySim${currentYear}`];
+        });
+
+        circles.transition().duration(1000).attr("r", d => radius(d.value));
+        groups.transition().duration(1000).attr("transform", d => `translate(${d.x},${d.y})`);
+        groups.select("text").transition().duration(1000).style("font-size", d => `${radius(d.value) * 0.8}px`);
+
+        yearDots.transition().duration(800)
+          .attr("fill", d => d === currentYear ? '#4CAF50' : '#fff');
+
+        yearLabels.transition().duration(800)
+          .attr("fill", d => d === currentYear ? "black" : "#999")
+          .attr("font-weight", d => d === currentYear ? "bold" : "normal");
+
+      }, 5000);
+    }
     });
-  }, [data, selectedYears, selectedRegions]);
+  }, [data, startYear, endYear, selectedRegions]);
 
   return (
     <div style={{ padding: '20px', position: 'relative' }}>
       <svg ref={ref}></svg>
-      <div
-        ref={tooltipRef}
-        style={{
-          position: 'absolute',
-          pointerEvents: 'none',
-          backgroundColor: 'rgba(0, 0, 0, 0.7)',
-          color: '#fff',
-          padding: '6px 10px',
-          borderRadius: '4px',
-          fontSize: '12px',
-          display: 'none',
-        }}
-      />
     </div>
   );
 };
