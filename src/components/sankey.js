@@ -19,7 +19,7 @@ const SankeyChart = ({ data, startYear, endYear, selectedRegions }) => {
   };
 
   useEffect(() => {
-    if (!data || (!startYear && !endYear) || selectedRegions.length === 0)
+    if (!data || (!startYear || !endYear) || selectedRegions.length === 0)
       return;
 
     const filtered = data.filter((d) => selectedRegions.includes(d.Region));
