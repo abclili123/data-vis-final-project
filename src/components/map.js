@@ -9,9 +9,12 @@ const MapChart = ({ data, startYear, endYear, selectedRegions }) => {
   useEffect(() => {
     if (!data || data.length === 0) return;
 
-    const isSingleYear = (startYear || endYear) && !(startYear && endYear);;
+    const isSingleYear = (startYear || endYear) && !(startYear && endYear);
     const width = 500;
     const height = 350;
+    console.log(startYear)
+    console.log(endYear)
+    console.log(isSingleYear)
 
     d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json").then(world => {
       const svg = d3.select(ref.current);
@@ -128,10 +131,7 @@ const MapChart = ({ data, startYear, endYear, selectedRegions }) => {
           }
           const cleaned = str.replace(/,/g, '');
           const num = +cleaned;
-          if (isNaN(num)) {
-            console.warn('Invalid numeric value:', str);
-            return 0;
-          }
+          if (isNaN(num)) return 0;
           return num;
         }
         return +str || 0;
@@ -140,60 +140,45 @@ const MapChart = ({ data, startYear, endYear, selectedRegions }) => {
       const yearA = startYear;
       const yearB = endYear;
 
-      const rawData = data
-        .filter(d => selectedRegions.includes(d.Region))
-        .map(d => {
-          const normalizedName = countryNameMap[d.Country] || d.Country;
-          const coords = countryCentroids.get(normalizedName);
-          const local = { hasDefaultValue: false };
-          const valueStart = parseValue(d[yearA], local);
-          const valueEnd = yearB ? parseValue(d[yearB], local) : valueStart;
-
-          if (!coords) {
-            missingCentroids.push({
-              Country: d.Country,
-              Region: d.Region,
-              Value: valueStart
-            });
+      const rawData = data.filter(d => selectedRegions.includes(d.Region)).map(d => {
+        const normalizedName = countryNameMap[d.Country] || d.Country;
+        const coords = countryCentroids.get(normalizedName);
+        const local = { hasDefaultValue: false };
+        const yearValues = {};
+        if (yearA != null && yearB == null) {
+          yearValues[yearA] = parseValue(d[yearA], local);
+        } else if (yearB != null && yearA == null) {
+          yearValues[yearB] = parseValue(d[yearB], local);
+        } else {
+          for (let year = yearA; year <= yearB; year++) {
+            yearValues[year] = parseValue(d[year], local);
           }
-
-          return {
-            id: normalizedName,
-            region: d.Region,
-            valueStart,
-            valueEnd,
-            value: valueStart,
-            hasDefaultValue: local.hasDefaultValue,
-            x: coords ? coords[0] : null,
-            y: coords ? coords[1] : null,
-            originalX: coords ? coords[0] : null,
-            originalY: coords ? coords[1] : null,
-            xSimStart: null,
-            ySimStart: null,
-            xSimEnd: null,
-            ySimEnd: null
-          };
-        }).filter(d => d.x !== null && d.y !== null);
+        }
+        if (!coords) missingCentroids.push({ Country: d.Country, Region: d.Region });
+        return {
+          id: normalizedName,
+          region: d.Region,
+          yearValues,
+          hasDefaultValue: local.hasDefaultValue,
+          x: coords ? coords[0] : null,
+          y: coords ? coords[1] : null,
+          originalX: coords ? coords[0] : null,
+          originalY: coords ? coords[1] : null
+        };
+      }).filter(d => d.x !== null && d.y !== null);
 
       const radius = d3.scaleSqrt()
-        .domain([0, d3.max(rawData, d => Math.max(d.valueStart, d.valueEnd))])
+        .domain([0, d3.max(rawData, d => d3.max(Object.values(d.yearValues)))])
         .range([0, 30]);
 
-      const usBox = {
-        cx: 100,
-        cy: 76,
-        width: 60,
-        height: 30,
-        angle: 15
-      };
+      const usBox = { cx: 100, cy: 76, width: 60, height: 30, angle: 15 };
 
-      const setSimulatedPositions = (data, valueKey, xKey, yKey) => {
+      const setSimulatedPositions = (data, currentYear, xKey, yKey) => {
         data.forEach(d => {
-          d.value = d[valueKey];
+          d.value = d.yearValues[currentYear];
           d.x = d.originalX;
           d.y = d.originalY;
         });
-
         const sim = d3.forceSimulation(data)
           .force("x", d3.forceX(d => d.x).strength(0.5))
           .force("y", d3.forceY(d => d.y).strength(0.5))
@@ -202,6 +187,9 @@ const MapChart = ({ data, startYear, endYear, selectedRegions }) => {
             const angle = (usBox.angle * Math.PI) / 180;
             const cosA = Math.cos(-angle);
             const sinA = Math.sin(-angle);
+            const hw = usBox.width / 2;
+            const hh = usBox.height / 2;
+            const strength = 2;
 
             data.forEach(d => {
               const r = radius(d.value);
@@ -210,12 +198,8 @@ const MapChart = ({ data, startYear, endYear, selectedRegions }) => {
               const rx = dx * cosA - dy * sinA;
               const ry = dx * sinA + dy * cosA;
 
-              const hw = usBox.width / 2;
-              const hh = usBox.height / 2;
-
               if (rx + r > -hw && rx - r < hw && ry + r > -hh && ry - r < hh) {
                 const len = Math.sqrt(dx * dx + dy * dy) || 1;
-                const strength = 2;
                 d.vx += (dx / len) * strength;
                 d.vy += (dy / len) * strength;
               }
@@ -223,31 +207,34 @@ const MapChart = ({ data, startYear, endYear, selectedRegions }) => {
           });
 
         for (let i = 0; i < 300; i++) sim.tick();
+        sim.stop();
 
         data.forEach(d => {
           d[xKey] = d.x;
           d[yKey] = d.y;
         });
-
-        sim.stop();
       };
 
-      if (isSingleYear) {
-        setSimulatedPositions(rawData, 'valueStart', 'xSimStart', 'ySimStart');
-        rawData.forEach(d => {
-          d.x = d.xSimStart;
-          d.y = d.ySimStart;
-          d.value = d.valueStart;
-        });
+      let allYears;
+      if (yearA != null && yearB == null) {
+        allYears = [yearA];
+      } else if (yearB != null && yearA == null) {
+        allYears = [yearB];
       } else {
-        setSimulatedPositions(rawData, 'valueStart', 'xSimStart', 'ySimStart');
-        setSimulatedPositions(rawData, 'valueEnd', 'xSimEnd', 'ySimEnd');
-        rawData.forEach(d => {
-          d.x = d.xSimStart;
-          d.y = d.ySimStart;
-          d.value = d.valueStart;
-        });
+        allYears = d3.range(yearA, yearB + 1);
       }
+      
+      allYears.forEach(year => {
+        setSimulatedPositions(rawData, year, `xSim${year}`, `ySim${year}`);
+      });
+
+      const firstYear = allYears[0];
+      rawData.forEach(d => {
+        d.value = d.yearValues[firstYear];
+        d.x = d[`xSim${firstYear}`];
+        d.y = d[`ySim${firstYear}`];
+      });
+
 
       svg.attr("viewBox", [0, 0, width - 100, height - 100])
         .style("width", "100%")
@@ -281,19 +268,8 @@ const MapChart = ({ data, startYear, endYear, selectedRegions }) => {
         .attr("stroke-width", 1.5)
         .attr("d", path);
 
-      svg.append("rect")
-        .attr("x", usBox.cx - usBox.width / 2)
-        .attr("y", usBox.cy - usBox.height / 2)
-        .attr("width", usBox.width)
-        .attr("height", usBox.height)
-        .attr("fill", "none")
-        .attr("stroke", "red")
-        .attr("stroke-width", 2)
-        .attr("transform", `rotate(${usBox.angle}, ${usBox.cx}, ${usBox.cy})`);
-
-
       const total = d3.sum(rawData.filter(d => !d.hasDefaultValue), d => d.value);
-      updateTotalLabel(yearA, total);
+      updateTotalLabel(firstYear, total);
 
       const groups = svg.selectAll("g.country-group")
         .data(rawData)
@@ -306,12 +282,10 @@ const MapChart = ({ data, startYear, endYear, selectedRegions }) => {
           const valueText = d.hasDefaultValue ? "Unknown" : d3.format(",")(d.value);
           const tooltipText = `${d.id}\n${valueText}`;
 
-          // Create a tooltip group
           const tooltipGroup = svg.append("g")
             .attr("id", "tooltip")
             .attr("transform", `translate(${cx}, ${cy - radius(d.value) - 10})`);
 
-          // Add text temporarily to measure its size
           const textEl = tooltipGroup.append("text")
             .attr("font-size", 6)
             .attr("font-family", "sans-serif")
@@ -338,7 +312,7 @@ const MapChart = ({ data, startYear, endYear, selectedRegions }) => {
         .on("mousemove", function (event) {
           const [x, y] = d3.pointer(event, svg.node());
           d3.select("#tooltip")
-            .attr("transform", `translate(${x}, ${y - 20})`); // Offset above the cursor
+            .attr("transform", `translate(${x}, ${y - 20})`);
         })
         .on("mouseout", function () {
           svg.select("#tooltip").remove();
@@ -362,29 +336,23 @@ const MapChart = ({ data, startYear, endYear, selectedRegions }) => {
         .style("font-size", d => `${radius(d.value) * 0.8}px`);
 
       if (!isSingleYear) {
+        let yearIndex = 0;
         d3.interval(() => {
+          const currentYear = allYears[yearIndex];
+          yearIndex = (yearIndex + 1) % allYears.length;
+
           rawData.forEach(d => {
-            const isStart = d.value === d.valueStart;
-            d.value = isStart ? d.valueEnd : d.valueStart;
-            d.x = isStart ? d.xSimEnd : d.xSimStart;
-            d.y = isStart ? d.ySimEnd : d.ySimStart;
-            const currentYear = isStart ? yearB : yearA;
-            const currentTotal = d3.sum(rawData.filter(d => !d.hasDefaultValue), d => d.value);
-            updateTotalLabel(currentYear, currentTotal);
+            d.value = d.yearValues[currentYear];
+            d.x = d[`xSim${currentYear}`];
+            d.y = d[`ySim${currentYear}`];
           });
 
-          circles.transition()
-            .duration(1000)
-            .attr("r", d => radius(d.value));
+          const currentTotal = d3.sum(rawData.filter(d => !d.hasDefaultValue), d => d.value);
+          updateTotalLabel(currentYear, currentTotal);
 
-          groups.transition()
-            .duration(1000)
-            .attr("transform", d => `translate(${d.x},${d.y})`);
-
-          groups.select("text")
-            .transition()
-            .duration(1000)
-            .style("font-size", d => `${radius(d.value) * 0.8}px`);
+          circles.transition().duration(1000).attr("r", d => radius(d.value));
+          groups.transition().duration(1000).attr("transform", d => `translate(${d.x},${d.y})`);
+          groups.select("text").transition().duration(1000).style("font-size", d => `${radius(d.value) * 0.8}px`);
         }, 5000);
       }
     });
@@ -393,18 +361,6 @@ const MapChart = ({ data, startYear, endYear, selectedRegions }) => {
   return (
     <div style={{ padding: '20px', position: 'relative' }}>
       <svg ref={ref}></svg>
-      <div
-        style={{
-          position: 'absolute',
-          pointerEvents: 'none',
-          backgroundColor: 'rgba(0, 0, 0, 0.7)',
-          color: '#fff',
-          padding: '6px 10px',
-          borderRadius: '4px',
-          fontSize: '12px',
-          display: 'none',
-        }}
-      />
     </div>
   );
 };
