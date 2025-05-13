@@ -22,5 +22,41 @@
         "url": "https://www.rferl.org/a/russian-asylum-applications-in-u-s-hit-24-year-record/29204843.html"
       }
     ]
+  },
+    {
+    "country": "Syria",
+    "year": 2017,
+    "image": "/images/syria.png",
+    "anecdote": "Mohammed was one of about 12,000 Syrian refugees who arrived in 2016, before a 2017 executive order indefinitely banned Syrian refugees from entering the US. A series of court battles only slightly softened the ban, and in 2018 the US admitted just 62 refugees from Syria. Mohammed says that for him, the situation is heartbreaking. His uncle began the clearance process to come to the US in 2016, but has been delayed ever since.",
+    "headlines": [
+      {
+        "text": "Mohammed’s Story",
+        "url": "https://www.exodusrefugee.org/story/mohammeds-story/"
+      }
+    ]
+  },
+     {
+    "country": "Honduras",
+    "year": 2019,
+    "image": "/images/honduras.png",
+    "anecdote": "Soledad Castillo, a Honduran migrant, fled abuse and extreme poverty at age 14, enduring a harrowing journey through Central America and Mexico to reach the United States. After arriving in California, she faced exploitation, forged documents to work underage, and suffered further abuse in the foster care system. Despite these hardships, she pursued her education, eventually graduating from San Francisco State University. Now a housing case manager for homeless youth, Castillo advocates for migrant rights and reforms in the foster care system, emphasizing that the struggles of migrants do not end at the border but continue as they strive to build stable, dignified lives in the U.S.",
+    "headlines": [
+      {
+        "text": "At 14, I walked through the desert to reach the US. My story didn't end there",
+        "url": "https://www.theguardian.com/commentisfree/2019/dec/18/immigration-international-migrant-day-honduras"
+      }
+    ]
+  },
+   {
+    "country": "Nigeria",
+    "year": 2015,
+    "image": "/images/nigeria.png",
+    "anecdote":"Falmata Baba Gana is one of the 65 million. She's a 30-year-old mother who fled her village in northeastern Nigeria almost a year ago after an attack by Boko Haram. She and her 7 children crossed the border into Niger and arrived at the Assaga camp, now home to some 6,000 refugees and people uprooted from their homes within Niger. Located in the Diffa region in southeast Niger, it's a makeshift refuge, buffeted by Sahara desert sands and winds, and running alongside Niger's main east-west expressway",
+      "headlines": [
+      {
+        "text": "One Mother's Perspective On What It's Like To Be A Refugee",
+        "url": "https://www.npr.org/sections/goatsandsoda/2016/06/20/482792609/one-mothers-perspective-on-what-its-like-to-be-a-refugee"
+      }
+    ]
   }
 ]
