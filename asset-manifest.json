@@ -1,13 +1,13 @@
 {
   "files": {
     "main.css": "/refugee-dashboard/static/css/main.0251fcaf.css",
-    "main.js": "/refugee-dashboard/static/js/main.c25e1f97.js",
+    "main.js": "/refugee-dashboard/static/js/main.99486901.js",
     "index.html": "/refugee-dashboard/index.html",
     "main.0251fcaf.css.map": "/refugee-dashboard/static/css/main.0251fcaf.css.map",
-    "main.c25e1f97.js.map": "/refugee-dashboard/static/js/main.c25e1f97.js.map"
+    "main.99486901.js.map": "/refugee-dashboard/static/js/main.99486901.js.map"
   },
   "entrypoints": [
     "static/css/main.0251fcaf.css",
-    "static/js/main.c25e1f97.js"
+    "static/js/main.99486901.js"
   ]
 }
