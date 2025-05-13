@@ -16,7 +16,7 @@ function CountryStory({ country, year, image, anecdote, headlines }) {
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap' }}>
         {image && (
           <img
-            src={image}
+            src={process.env.PUBLIC_URL + image}
             alt={`${country} map`}
             style={{
               width: '130px',

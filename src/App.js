@@ -25,8 +25,8 @@ function App() {
 
   // Load data once on mount
   useEffect(() => {
-    d3.csv('/data/country_by_year.csv').then(setCountryByYearData);
-    d3.json('/data/country_stories.json').then((data) => {
+    d3.csv(process.env.PUBLIC_URL + '/data/country_by_year.csv').then(setCountryByYearData);
+    d3.json(process.env.PUBLIC_URL + '/data/country_stories.json').then((data) => {
       console.log('Loaded country stories:', data); // Debug log
       setCountryStories(data);
     });
