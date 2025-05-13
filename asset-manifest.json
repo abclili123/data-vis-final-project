@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/data-vis-final-project/static/css/main.0251fcaf.css",
+    "main.js": "/data-vis-final-project/static/js/main.c25e1f97.js",
+    "index.html": "/data-vis-final-project/index.html",
+    "main.0251fcaf.css.map": "/data-vis-final-project/static/css/main.0251fcaf.css.map",
+    "main.c25e1f97.js.map": "/data-vis-final-project/static/js/main.c25e1f97.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.0251fcaf.css",
+    "static/js/main.c25e1f97.js"
+  ]
+}
